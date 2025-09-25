@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DragEndEvent } from '@dnd-kit/core';
 import { WeeklyGrid } from '@/components/WeeklyGrid';
 import { PersonRow } from '@/components/PersonRow';
@@ -12,10 +12,14 @@ import { useCalendarStore } from '@/stores/calendarStore';
 import { pixelToDate, assignmentsOverlap, pixelWidthToDays, getWeekDays } from '@/utils/calendarUtils';
 
 export default function Home() {
-  const { people, assignments, updateAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday } = useCalendarStore();
+  const { people, assignments, updateAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData } = useCalendarStore();
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const weekDays = getWeekDays(selectedWeek, 1);
 

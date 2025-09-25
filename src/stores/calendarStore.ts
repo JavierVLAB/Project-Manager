@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Person, Project, Assignment } from '@/types';
 import { snapToWeek } from '@/utils/calendarUtils';
+import Papa from 'papaparse';
 
 // Custom reviver to convert date strings back to Date objects
 const dateReviver = (key: string, value: unknown) => {
@@ -23,6 +24,7 @@ interface CalendarActions {
   updatePerson: (id: string, updates: Partial<Omit<Person, 'id'>>) => void;
   addProject: (project: Omit<Project, 'id'>) => void;
   updateProject: (id: string, updates: Partial<Omit<Project, 'id'>>) => void;
+  updateProjectColor: (id: string, color: string) => void;
   addAssignment: (assignment: Omit<Assignment, 'id'>) => void;
   updateAssignment: (id: string, updates: Partial<Omit<Assignment, 'id'>>) => void;
   getPersonCapacity: (personId: string) => number;
@@ -31,25 +33,15 @@ interface CalendarActions {
   goToPreviousWeek: () => void;
   goToNextWeek: () => void;
   goToToday: () => void;
+  loadData: () => Promise<void>;
 }
 
 export const useCalendarStore = create<CalendarState & CalendarActions>()(
   persist(
     (set, get) => ({
   selectedWeek: snapToWeek(new Date()),
-  people: [
-    { id: '1', name: 'Alice Johnson', role: 'Developer' },
-    { id: '2', name: 'Bob Smith', role: 'Designer' },
-    { id: '3', name: 'Charlie Brown', role: 'Manager' },
-    { id: '4', name: 'Diana Prince', role: 'QA' },
-    { id: '5', name: 'Eve Wilson', role: 'Developer' },
-  ],
-  projects: [
-    { id: '1', name: 'Project Alpha', color: '#FF6B6B' },
-    { id: '2', name: 'Project Beta', color: '#4ECDC4' },
-    { id: '3', name: 'Project Gamma', color: '#45B7D1' },
-    { id: '4', name: 'Project Delta', color: '#96CEB4' },
-  ],
+  people: [],
+  projects: [],
   assignments: [
     {
       id: '1',
@@ -104,6 +96,9 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
   updateProject: (id, updates) => set((state) => ({
     projects: state.projects.map(p => p.id === id ? { ...p, ...updates } : p),
   })),
+  updateProjectColor: (id, color) => set((state) => ({
+    projects: state.projects.map(p => p.id === id ? { ...p, color } : p),
+  })),
   addAssignment: (assignment) => set((state) => {
     if (!state.validateCapacity(assignment.personId, assignment.percentage)) {
       console.warn('Capacity limit exceeded, assignment not added');
@@ -151,11 +146,42 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     return { selectedWeek: nextWeek };
   }),
   goToToday: () => set({ selectedWeek: snapToWeek(new Date()) }),
+  loadData: async () => {
+    try {
+      // Load projects
+      const projectsResponse = await fetch('/projects.csv');
+      const projectsText = await projectsResponse.text();
+      const projectsParsed = Papa.parse(projectsText, { header: false, skipEmptyLines: true });
+      const projects: Project[] = projectsParsed.data.slice(1).map((row: any, index: number) => ({
+        id: (index + 1).toString(),
+        name: row[1] || '',
+        color: '#000000',
+      }));
+
+      // Load users
+      const usersResponse = await fetch('/users.csv');
+      const usersText = await usersResponse.text();
+      const usersParsed = Papa.parse(usersText, { header: false, skipEmptyLines: true });
+      const users: Person[] = usersParsed.data.slice(1).filter((row: any) => row[0] && row[0] !== 'Total de horas trabajadas').map((row: any, index: number) => ({
+        id: row[1] || (index + 1).toString(),
+        name: row[0],
+        role: 'Employee',
+      }));
+
+      set({ people: users, projects: projects });
+    } catch (error) {
+      console.error('Error loading data from CSV:', error);
+    }
+  },
     }),
     {
       name: 'calendar-storage',
       storage: createJSONStorage(() => localStorage, {
         reviver: dateReviver,
+      }),
+      partialize: (state) => ({
+        assignments: state.assignments,
+        selectedWeek: state.selectedWeek,
       }),
     }
   )
