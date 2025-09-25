@@ -1,103 +1,166 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { DragEndEvent } from '@dnd-kit/core';
+import { WeeklyGrid } from '@/components/WeeklyGrid';
+import { PersonRow } from '@/components/PersonRow';
+import { ProjectLegend } from '@/components/ProjectLegend';
+import { AddEditPersonDialog } from '@/components/AddEditPersonDialog';
+import { AddEditProjectDialog } from '@/components/AddEditProjectDialog';
+import { AddEditAssignmentDialog } from '@/components/AddEditAssignmentDialog';
+import { useCalendarStore } from '@/stores/calendarStore';
+import { pixelToDate, assignmentsOverlap, pixelWidthToDays, getWeekDays } from '@/utils/calendarUtils';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { people, assignments, updateAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday } = useCalendarStore();
+  const [personDialogOpen, setPersonDialogOpen] = useState(false);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const weekDays = getWeekDays(selectedWeek, 1);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, delta } = event;
+    if (!active || !delta.x) return;
+
+    const assignment = active.data.current?.assignment;
+    const type = active.data.current?.type;
+    if (!assignment) return;
+
+    const containerWidth = 700; // Approximate width for 1 week
+
+    if (type === 'move') {
+      // Calculate new start date based on drag
+      const newStartDate = pixelToDate(delta.x, containerWidth, weekDays);
+
+      // Calculate duration
+      const durationMs = new Date(assignment.endDate).getTime() - new Date(assignment.startDate).getTime();
+      const newEndDate = new Date(newStartDate.getTime() + durationMs);
+
+      // Check for overlaps with other assignments for the same person
+      const personAssignments = assignments.filter(a => a.personId === assignment.personId && a.id !== assignment.id);
+      const hasOverlap = personAssignments.some(other =>
+        assignmentsOverlap({ startDate: newStartDate, endDate: newEndDate }, other)
+      );
+
+      if (!hasOverlap) {
+        updateAssignment(assignment.id, {
+          startDate: newStartDate,
+          endDate: newEndDate,
+        });
+      }
+      // If overlap, do nothing (could add feedback)
+    } else if (type === 'resize') {
+      // Calculate new width
+      const newDays = pixelWidthToDays(delta.x, containerWidth);
+      const newEndDate = new Date(assignment.startDate);
+      newEndDate.setDate(newEndDate.getDate() + newDays - 1); // -1 because start day counts
+
+      // Check for overlaps
+      const personAssignments = assignments.filter(a => a.personId === assignment.personId && a.id !== assignment.id);
+      const hasOverlap = personAssignments.some(other =>
+        assignmentsOverlap({ startDate: assignment.startDate, endDate: newEndDate }, other)
+      );
+
+      if (!hasOverlap && newDays >= 1) {
+        updateAssignment(assignment.id, {
+          endDate: newEndDate,
+        });
+      }
+    }
+  };
+
+  const handlePercentageChange = (assignmentId: string, percentage: number) => {
+    updateAssignment(assignmentId, { percentage });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+          Weekly Resource Calendar - MVP Iteration 3
+        </h1>
+
+        <div className="mb-6 flex items-center space-x-4">
+          <button
+            onClick={goToPreviousWeek}
+            className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            ‹ Anterior
+          </button>
+          <button
+            onClick={goToToday}
+            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            Read our docs
-          </a>
+            Hoy
+          </button>
+          <button
+            onClick={goToNextWeek}
+            className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+          >
+            Siguiente ›
+          </button>
+          <span className="text-gray-700">
+            Semana del {selectedWeek.toLocaleDateString('es-ES')} al {new Date(selectedWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')}
+          </span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="mb-6 flex space-x-4">
+          <button
+            onClick={() => setPersonDialogOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Add Person
+          </button>
+          <button
+            onClick={() => setProjectDialogOpen(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            Add Project
+          </button>
+          <button
+            onClick={() => setAssignmentDialogOpen(true)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+          >
+            Add Assignment
+          </button>
+        </div>
+
+        <div className="flex space-x-6">
+          <div className="flex-1">
+            <WeeklyGrid onDragEnd={handleDragEnd} selectedWeek={selectedWeek} weeks={1}>
+              {people.map((person) => {
+                const personAssignments = assignments.filter(
+                  (assignment) => assignment.personId === person.id
+                );
+                return (
+                  <PersonRow
+                    key={person.id}
+                    person={person}
+                    assignments={personAssignments}
+                    weekDays={weekDays}
+                    onPercentageChange={handlePercentageChange}
+                  />
+                );
+              })}
+            </WeeklyGrid>
+          </div>
+          <ProjectLegend />
+        </div>
+
+        <AddEditPersonDialog
+          isOpen={personDialogOpen}
+          onClose={() => setPersonDialogOpen(false)}
+        />
+        <AddEditProjectDialog
+          isOpen={projectDialogOpen}
+          onClose={() => setProjectDialogOpen(false)}
+        />
+        <AddEditAssignmentDialog
+          isOpen={assignmentDialogOpen}
+          onClose={() => setAssignmentDialogOpen(false)}
+        />
+      </div>
     </div>
   );
 }
