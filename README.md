@@ -120,4 +120,4 @@ src/
 - ✅ Compiles without errors
 - ✅ Updated documentation with week navigation, 4-week view, and project legend
 
-nueva linea
+version 0.1.0
