@@ -20,12 +20,12 @@ interface CalendarState {
 }
 
 interface CalendarActions {
-  addPerson: (person: Omit<Person, 'id'>) => void;
+  addPerson: (person: Omit<Person, 'id'>) => Promise<void>;
   updatePerson: (id: string, updates: Partial<Omit<Person, 'id'>>) => void;
-  addProject: (project: Omit<Project, 'id'>) => void;
+  addProject: (project: Omit<Project, 'id'>) => Promise<void>;
   updateProject: (id: string, updates: Partial<Omit<Project, 'id'>>) => void;
   updateProjectColor: (id: string, color: string) => void;
-  addAssignment: (assignment: Omit<Assignment, 'id'>) => void;
+  addAssignment: (assignment: Omit<Assignment, 'id'>) => Promise<void>;
   updateAssignment: (id: string, updates: Partial<Omit<Assignment, 'id'>>) => void;
   getPersonCapacity: (personId: string) => number;
   validateCapacity: (personId: string, additionalPercentage?: number) => boolean;
@@ -42,72 +42,101 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
   selectedWeek: snapToWeek(new Date()),
   people: [],
   projects: [],
-  assignments: [
-    {
-      id: '1',
-      personId: '1',
-      projectId: '1',
-      startDate: new Date(2023, 9, 2), // Oct 2
-      endDate: new Date(2023, 9, 6), // Oct 6
-      percentage: 50,
-    },
-    {
-      id: '2',
-      personId: '2',
-      projectId: '2',
-      startDate: new Date(2023, 9, 3),
-      endDate: new Date(2023, 9, 5),
-      percentage: 40,
-    },
-    {
-      id: '3',
-      personId: '3',
-      projectId: '3',
-      startDate: new Date(2023, 9, 4),
-      endDate: new Date(2023, 9, 8),
-      percentage: 60,
-    },
-    {
-      id: '4',
-      personId: '4',
-      projectId: '1',
-      startDate: new Date(2023, 9, 2),
-      endDate: new Date(2023, 9, 4),
-      percentage: 30,
-    },
-    {
-      id: '5',
-      personId: '5',
-      projectId: '4',
-      startDate: new Date(2023, 9, 5),
-      endDate: new Date(2023, 9, 7),
-      percentage: 45,
-    },
-  ],
-  addPerson: (person) => set((state) => ({
-    people: [...state.people, { ...person, id: Date.now().toString() }],
-  })),
+  assignments: [],
+  addPerson: async (person) => {
+    const newPerson = { ...person, id: Date.now().toString() };
+    set((state) => ({
+      people: [...state.people, newPerson],
+    }));
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: person.name }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add person to CSV');
+      }
+    } catch (error) {
+      console.error('Error adding person to CSV:', error);
+      // Revert the addition
+      set((state) => ({
+        people: state.people.filter(p => p.id !== newPerson.id),
+      }));
+    }
+  },
   updatePerson: (id, updates) => set((state) => ({
     people: state.people.map(p => p.id === id ? { ...p, ...updates } : p),
   })),
-  addProject: (project) => set((state) => ({
-    projects: [...state.projects, { ...project, id: Date.now().toString() }],
-  })),
+  addProject: async (project) => {
+    const newProject = { ...project, id: Date.now().toString() };
+    set((state) => ({
+      projects: [...state.projects, newProject],
+    }));
+
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: project.name }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add project to CSV');
+      }
+    } catch (error) {
+      console.error('Error adding project to CSV:', error);
+      // Revert the addition
+      set((state) => ({
+        projects: state.projects.filter(p => p.id !== newProject.id),
+      }));
+    }
+  },
   updateProject: (id, updates) => set((state) => ({
     projects: state.projects.map(p => p.id === id ? { ...p, ...updates } : p),
   })),
   updateProjectColor: (id, color) => set((state) => ({
     projects: state.projects.map(p => p.id === id ? { ...p, color } : p),
   })),
-  addAssignment: (assignment) => set((state) => {
-    if (!state.validateCapacity(assignment.personId, assignment.percentage)) {
+  addAssignment: async (assignment) => {
+    console.log('addAssignment called with:', assignment);
+    if (!get().validateCapacity(assignment.personId, assignment.percentage)) {
       console.warn('Capacity limit exceeded, assignment not added');
-      return state;
+      return;
     }
-    return {
-      assignments: [...state.assignments, { ...assignment, id: Date.now().toString() }],
-    };
-  }),
+    const newAssignment = { ...assignment, id: Date.now().toString() };
+    console.log('New assignment to add:', newAssignment);
+    set((state) => ({
+      assignments: [...state.assignments, newAssignment],
+    }));
+
+    try {
+      const response = await fetch('/api/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personId: assignment.personId,
+          projectId: assignment.projectId,
+          startDate: assignment.startDate.toISOString(),
+          endDate: assignment.endDate.toISOString(),
+          percentage: assignment.percentage,
+        }),
+      });
+      console.log('API response:', response.status);
+
+      if (!response.ok) {
+        throw new Error('Failed to add assignment to CSV');
+      }
+    } catch (error) {
+      console.error('Error adding assignment to CSV:', error);
+      // Revert the addition
+      set((state) => ({
+        assignments: state.assignments.filter(a => a.id !== newAssignment.id),
+      }));
+    }
+  },
   updateAssignment: (id, updates) => set((state) => {
     const updatedAssignments = state.assignments.map(a => a.id === id ? { ...a, ...updates } : a);
     const updatedAssignment = updatedAssignments.find(a => a.id === id);
@@ -168,7 +197,23 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
         role: 'Employee',
       }));
 
-      set({ people: users, projects: projects });
+      // Load assignments
+      const assignmentsResponse = await fetch('/assignments.csv');
+      const assignmentsText = await assignmentsResponse.text();
+      console.log('Assignments CSV text:', assignmentsText);
+      const assignmentsParsed = Papa.parse(assignmentsText, { header: false, skipEmptyLines: true });
+      console.log('Assignments parsed data:', assignmentsParsed.data);
+      const assignments: Assignment[] = assignmentsParsed.data.slice(1).map((row: any, index: number) => ({
+        id: (index + 1).toString(),
+        personId: row[0],
+        projectId: row[1],
+        startDate: new Date(row[2]),
+        endDate: new Date(row[3]),
+        percentage: parseInt(row[4], 10),
+      }));
+      console.log('Loaded assignments:', assignments);
+
+      set({ people: users, projects: projects, assignments: assignments });
     } catch (error) {
       console.error('Error loading data from CSV:', error);
     }
@@ -180,7 +225,6 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
         reviver: dateReviver,
       }),
       partialize: (state) => ({
-        assignments: state.assignments,
         selectedWeek: state.selectedWeek,
       }),
     }
