@@ -97,7 +97,6 @@ src/
 - **@dnd-kit/modifiers**: Drag and drop modifiers
 - **ESLint**: Code linting
 
-## Acceptance Criteria Met
 
 - ✅ Dynamic CRUD for people and projects
 - ✅ Manual assignment creation with person/project selection, date range, and percentage
@@ -120,3 +119,5 @@ src/
 - ✅ Project legend sidebar with dynamic color display
 - ✅ Compiles without errors
 - ✅ Updated documentation with week navigation, 4-week view, and project legend
+
+nueva linea
