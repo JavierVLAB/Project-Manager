@@ -87,6 +87,8 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
        style={style}
        onClick={handleClick}
        title={`${project?.name || 'Unknown Project'} - ${assignment.percentage}%`}
+       {...attributes}
+       {...listeners}
      >
        {assignment.percentage}%
      </div>

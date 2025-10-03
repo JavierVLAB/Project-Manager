@@ -181,21 +181,30 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       const projectsResponse = await fetch('/projects.csv');
       const projectsText = await projectsResponse.text();
       const projectsParsed = Papa.parse(projectsText, { header: false, skipEmptyLines: true });
-      const projects: Project[] = projectsParsed.data.slice(1).map((row: any, index: number) => ({
-        id: (index + 1).toString(),
-        name: row[1] || '',
-        color: '#000000',
-      }));
+      const projects: Project[] = projectsParsed.data.slice(1).map((row, index: number) => {
+        const r = row as unknown[];
+        return {
+          id: (index + 1).toString(),
+          name: (r[1] as string) || '',
+          color: '#000000',
+        };
+      });
 
       // Load users
       const usersResponse = await fetch('/users.csv');
       const usersText = await usersResponse.text();
       const usersParsed = Papa.parse(usersText, { header: false, skipEmptyLines: true });
-      const users: Person[] = usersParsed.data.slice(1).filter((row: any) => row[0] && row[0] !== 'Total de horas trabajadas').map((row: any, index: number) => ({
-        id: row[1] || (index + 1).toString(),
-        name: row[0],
-        role: 'Employee',
-      }));
+      const users: Person[] = usersParsed.data.slice(1).filter((row) => {
+        const r = row as unknown[];
+        return (r[0] as string) && (r[0] as string) !== 'Total de horas trabajadas';
+      }).map((row, index: number) => {
+        const r = row as unknown[];
+        return {
+          id: (r[1] as string) || (index + 1).toString(),
+          name: r[0] as string,
+          role: 'Employee',
+        };
+      });
 
       // Load assignments
       const assignmentsResponse = await fetch('/assignments.csv');
@@ -203,14 +212,17 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       console.log('Assignments CSV text:', assignmentsText);
       const assignmentsParsed = Papa.parse(assignmentsText, { header: false, skipEmptyLines: true });
       console.log('Assignments parsed data:', assignmentsParsed.data);
-      const assignments: Assignment[] = assignmentsParsed.data.slice(1).map((row: any, index: number) => ({
-        id: (index + 1).toString(),
-        personId: row[0],
-        projectId: row[1],
-        startDate: new Date(row[2]),
-        endDate: new Date(row[3]),
-        percentage: parseInt(row[4], 10),
-      }));
+      const assignments: Assignment[] = assignmentsParsed.data.slice(1).map((row, index: number) => {
+        const r = row as unknown[];
+        return {
+          id: (index + 1).toString(),
+          personId: r[0] as string,
+          projectId: r[1] as string,
+          startDate: new Date(r[2] as string),
+          endDate: new Date(r[3] as string),
+          percentage: parseInt(r[4] as string, 10),
+        };
+      });
       console.log('Loaded assignments:', assignments);
 
       set({ people: users, projects: projects, assignments: assignments });
