@@ -18,8 +18,10 @@ jobs:
       - name: Instalar dependencias necesarias
         run: |
           apt-get update
-          # Usamos paquetes de Ubuntu: no hace falta añadir el repo de Docker (así evitamos gpg)
-          apt-get install -y docker.io docker-compose-plugin git curl ca-certificates lsb-release
+          apt-get install -y docker.io git curl ca-certificates lsb-release
+          curl -L "https://github.com/docker/compose/releases/download/2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+
 
       - name: Checkout del repositorio
         uses: actions/checkout@v4
