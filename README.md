@@ -121,3 +121,5 @@ src/
 - ✅ Updated documentation with week navigation, 4-week view, and project legend
 
 version 0.1.0
+
+test
