@@ -8,16 +8,22 @@ jobs:
   deploy:
     runs-on: self-hosted
 
-    steps:
-      # 👇 Asegura que el PATH incluya binarios del sistema (gpg, curl, etc.)
-      - name: Fix PATH for system binaries
-        run: echo "/usr/bin" >> $GITHUB_PATH
+    # Ejecuta los steps dentro de un contenedor moderno (evita el problema de GLIBC)
+    container:
+      image: ubuntu:22.04
+      # Monta el socket de Docker del host para poder ejecutar `docker compose` desde el contenedor
+      options: --volume /var/run/docker.sock:/var/run/docker.sock
 
-      # ✅ Clona el repositorio en el runner
+    steps:
+      - name: Instalar dependencias necesarias
+        run: |
+          apt-get update
+          # Usamos paquetes de Ubuntu: no hace falta añadir el repo de Docker (así evitamos gpg)
+          apt-get install -y docker.io docker-compose-plugin git curl ca-certificates lsb-release
+
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      # 🚀 Construye y reinicia la app con Docker Compose
       - name: Construir y reiniciar con Docker Compose
         run: |
           docker compose down || true
