@@ -16,7 +16,15 @@ jobs:
       - name: Instalar dependencias necesarias
         run: |
           apt update
-          apt install -y curl git ca-certificates docker.io docker-compose-plugin
+          apt install -y curl git ca-certificates lsb-release
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+            https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+          apt update
+          apt install -y docker-ce-cli docker-compose-plugin
 
       - name: Checkout del repositorio
         uses: actions/checkout@v4
