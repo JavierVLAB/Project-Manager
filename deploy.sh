@@ -1,10 +1,17 @@
 #!/bin/bash
 set -e
 
-echo "Actualizando código..."
-git pull origin main
+# Usa un entorno Docker aislado para evitar credenciales compartidas
+export DOCKER_CONFIG=$(mktemp -d)
 
-echo "Levantando aplicación..."
+echo "🔄 Deteniendo contenedores..."
+docker compose down
+
+echo "🧱 Reconstruyendo imágenes (config aislada)..."
+docker compose build --no-cache
+
+echo "🚀 Levantando aplicación..."
 docker compose up -d
 
-echo "✅ Despliegue completado."
+echo "✅ Despliegue completado correctamente (sin afectar otros usuarios)."
+
