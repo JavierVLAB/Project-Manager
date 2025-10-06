@@ -8,12 +8,21 @@ jobs:
   deploy:
     runs-on: self-hosted
 
+    # 👇 Esto fuerza que el workflow se ejecute dentro de un contenedor moderno
+    container:
+      image: ubuntu:22.04
+
     steps:
-      - name: Checkout
+      - name: Instalar dependencias necesarias
+        run: |
+          apt update
+          apt install -y curl git ca-certificates docker.io docker-compose-plugin
+
+      - name: Checkout del repositorio
         uses: actions/checkout@v4
 
       - name: Construir y reiniciar con Docker Compose
         run: |
-          docker compose down
+          docker compose down || true
           docker compose up -d --build
           docker system prune -f
