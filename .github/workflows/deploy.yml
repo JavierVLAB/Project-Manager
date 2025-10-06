@@ -8,26 +8,17 @@ jobs:
   deploy:
     runs-on: self-hosted
 
-    # Ejecuta los steps dentro de un contenedor moderno (evita el problema de GLIBC)
-    container:
-      image: ubuntu:22.04
-      # Monta el socket de Docker del host para poder ejecutar `docker compose` desde el contenedor
-      options: --volume /var/run/docker.sock:/var/run/docker.sock
-
     steps:
-      - name: Instalar dependencias necesarias
-        run: |
-          apt-get update
-          apt-get install -y docker.io git curl ca-certificates lsb-release
-          curl -L "https://github.com/docker/compose/releases/download/2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          chmod +x /usr/local/bin/docker-compose
-
-
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
+      - name: Mostrar versión de Docker
+        run: |
+          docker --version
+          docker compose version
+
       - name: Construir y reiniciar con Docker Compose
         run: |
-          docker-compose down || true
-          docker-compose up -d --build
+          docker compose down || true
+          docker compose up -d --build
           docker system prune -f
