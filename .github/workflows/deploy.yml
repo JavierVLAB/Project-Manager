@@ -8,27 +8,16 @@ jobs:
   deploy:
     runs-on: self-hosted
 
-    # 👇 Esto fuerza que el workflow se ejecute dentro de un contenedor moderno
-    container:
-      image: ubuntu:22.04
-
     steps:
-      - name: Instalar dependencias necesarias
-        run: |
-          apt update
-          apt install -y curl git ca-certificates lsb-release
-          mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-            https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-          apt update
-          apt install -y docker-ce-cli docker-compose-plugin
+      # 👇 Asegura que el PATH incluya binarios del sistema (gpg, curl, etc.)
+      - name: Fix PATH for system binaries
+        run: echo "/usr/bin" >> $GITHUB_PATH
 
+      # ✅ Clona el repositorio en el runner
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
+      # 🚀 Construye y reinicia la app con Docker Compose
       - name: Construir y reiniciar con Docker Compose
         run: |
           docker compose down || true
