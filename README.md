@@ -122,4 +122,11 @@ src/
 
 version 0.1.0
 
-test
+
+> for deploy 
+
+````
+cd Project-Manager/
+git pull origin main
+sh deploy.sh
+```
