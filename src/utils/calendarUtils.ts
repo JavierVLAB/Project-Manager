@@ -57,19 +57,61 @@ export function calculateAssignmentPosition(
   const weekStart = weekDays[0].date;
   const weekEnd = weekDays[6].date;
 
+
+  // Normalize dates to start of day to avoid timezone issues
+  const normalizeToStartOfDay = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const normalizedStart = normalizeToStartOfDay(startDate);
+  const normalizedEnd = normalizeToStartOfDay(endDate);
+  const normalizedWeekStart = normalizeToStartOfDay(weekStart);
+  const normalizedWeekEnd = normalizeToStartOfDay(weekEnd);
+
   // If assignment is outside the week, return null
-  if (endDate < weekStart || startDate > weekEnd) {
+  if (normalizedEnd < normalizedWeekStart || normalizedStart > normalizedWeekEnd) {
+    console.log('Assignment outside week range:', {
+      startDate: normalizedStart.toISOString().split('T')[0],
+      endDate: normalizedEnd.toISOString().split('T')[0],
+      weekStart: normalizedWeekStart.toISOString().split('T')[0],
+      weekEnd: normalizedWeekEnd.toISOString().split('T')[0],
+      startBeforeWeekStart: normalizedStart < normalizedWeekStart,
+      endAfterWeekEnd: normalizedEnd > normalizedWeekEnd
+    });
     return null;
   }
 
-  const effectiveStart = startDate < weekStart ? weekStart : startDate;
-  const effectiveEnd = endDate > weekEnd ? weekEnd : endDate;
+  const effectiveStart = normalizedStart < normalizedWeekStart ? normalizedWeekStart : normalizedStart;
+  const effectiveEnd = normalizedEnd > normalizedWeekEnd ? normalizedWeekEnd : normalizedEnd;
 
-  const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)));
-  const endIndex = Math.min(6, Math.floor((effectiveEnd.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)));
+  // Calculate day indices (0-6 for Mon-Sun)
+  const startIndex = Math.floor((effectiveStart.getTime() - normalizedWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+  const endIndex = Math.floor((effectiveEnd.getTime() - normalizedWeekStart.getTime()) / (1000 * 60 * 60 * 24));
 
-  const left = (startIndex / 7) * 100;
-  const width = ((endIndex - startIndex + 1) / 7) * 100;
+  // Ensure indices are within valid range
+  const clampedStartIndex = Math.max(0, Math.min(6, startIndex));
+  const clampedEndIndex = Math.max(0, Math.min(6, endIndex));
+
+  const left = (clampedStartIndex / 7) * 100;
+  const width = ((clampedEndIndex - clampedStartIndex + 1) / 7) * 100;
+
+  // Debug logging for Monday assignments
+  if (clampedStartIndex === 0 || startIndex === 0) {
+    console.log('Monday assignment detected:', {
+      startDate: effectiveStart.toISOString().split('T')[0],
+      endDate: effectiveEnd.toISOString().split('T')[0],
+      weekStart: normalizedWeekStart.toISOString().split('T')[0],
+      rawStartIndex: startIndex,
+      rawEndIndex: endIndex,
+      clampedStartIndex,
+      clampedEndIndex,
+      left,
+      width,
+      shouldShow: width > 0 && left >= 0 && left < 100
+    });
+  }
 
   return { left, width };
 }
