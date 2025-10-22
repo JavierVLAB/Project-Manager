@@ -60,7 +60,7 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900">
           {person ? 'Edit Person' : 'Add Person'}
         </h2>
         <form onSubmit={handleSubmit}>
@@ -72,7 +72,7 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
@@ -84,7 +84,7 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
               type="text"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
             {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}
           </div>
@@ -92,7 +92,7 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
             </button>

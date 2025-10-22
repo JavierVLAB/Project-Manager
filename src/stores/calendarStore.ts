@@ -27,6 +27,9 @@ interface CalendarActions {
   updateProjectColor: (id: string, color: string) => void;
   addAssignment: (assignment: Omit<Assignment, 'id'>) => Promise<void>;
   updateAssignment: (id: string, updates: Partial<Omit<Assignment, 'id'>>) => void;
+  deleteAssignment: (id: string) => void;
+  deletePerson: (id: string) => void;
+  deleteProject: (id: string) => void;
   getPersonCapacity: (personId: string) => number;
   validateCapacity: (personId: string, additionalPercentage?: number) => boolean;
   setSelectedWeek: (week: Date) => void;
@@ -34,6 +37,7 @@ interface CalendarActions {
   goToNextWeek: () => void;
   goToToday: () => void;
   loadData: () => Promise<void>;
+  saveAllData: () => Promise<void>;
 }
 
 export const useCalendarStore = create<CalendarState & CalendarActions>()(
@@ -137,27 +141,68 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       }));
     }
   },
-  updateAssignment: (id, updates) => set((state) => {
+  updateAssignment: async (id, updates) => {
+    const state = get();
     const updatedAssignments = state.assignments.map(a => a.id === id ? { ...a, ...updates } : a);
     const updatedAssignment = updatedAssignments.find(a => a.id === id);
     if (updatedAssignment && !state.validateCapacity(updatedAssignment.personId)) {
       console.warn('Capacity limit exceeded, assignment not updated');
-      return state;
+      return;
     }
-    return {
+
+    set({
       assignments: updatedAssignments,
-    };
-  }),
+    });
+
+    // Save all assignments to CSV after update
+    try {
+      const assignmentsResponse = await fetch('/api/assignments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignments: updatedAssignments.map(a => ({
+            personId: a.personId,
+            projectId: a.projectId,
+            startDate: a.startDate instanceof Date && !isNaN(a.startDate.getTime()) ? a.startDate.toISOString() : a.startDate,
+            endDate: a.endDate instanceof Date && !isNaN(a.endDate.getTime()) ? a.endDate.toISOString() : a.endDate,
+            percentage: a.percentage,
+          }))
+        }),
+      });
+
+      if (!assignmentsResponse.ok) {
+        throw new Error('Failed to save assignments');
+      }
+    } catch (error) {
+      console.error('Error saving assignments after update:', error);
+    }
+  },
   getPersonCapacity: (personId) => {
     const state = get();
     const weekStart = state.selectedWeek;
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6); // 1 week - 1 day
 
-    return state.assignments
+    // Normalize dates to start of day for consistent comparison
+    const normalizeToStartOfDay = (date: Date) => {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+
+    const normalizedWeekStart = normalizeToStartOfDay(weekStart);
+    const normalizedWeekEnd = normalizeToStartOfDay(weekEnd);
+
+    const relevantAssignments = state.assignments
       .filter((assignment: Assignment) => assignment.personId === personId)
-      .filter((assignment: Assignment) => assignment.startDate <= weekEnd && assignment.endDate >= weekStart)
-      .reduce((total: number, assignment: Assignment) => total + assignment.percentage, 0);
+      .filter((assignment: Assignment) => {
+        const normalizedStart = normalizeToStartOfDay(assignment.startDate);
+        const normalizedEnd = normalizeToStartOfDay(assignment.endDate);
+        const overlaps = normalizedStart <= normalizedWeekEnd && normalizedEnd >= normalizedWeekStart;
+        return overlaps;
+      });
+
+    return relevantAssignments.reduce((sum: number, assignment: Assignment) => sum + assignment.percentage, 0);
   },
   validateCapacity: (personId, additionalPercentage = 0) => {
     const currentCapacity = get().getPersonCapacity(personId);
@@ -181,12 +226,12 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       const projectsResponse = await fetch('/local_permanent/projects.csv');
       const projectsText = await projectsResponse.text();
       const projectsParsed = Papa.parse(projectsText, { header: false, skipEmptyLines: true });
-      const projects: Project[] = projectsParsed.data.slice(1).map((row, index: number) => {
+      const projects: Project[] = projectsParsed.data.map((row, index: number) => {
         const r = row as unknown[];
         return {
           id: (index + 1).toString(),
           name: (r[1] as string) || '',
-          color: '#000000',
+          color: (r[2] as string) || '#000000',
         };
       });
 
@@ -194,7 +239,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       const usersResponse = await fetch('/local_permanent/users.csv');
       const usersText = await usersResponse.text();
       const usersParsed = Papa.parse(usersText, { header: false, skipEmptyLines: true });
-      const users: Person[] = usersParsed.data.slice(1).filter((row) => {
+      const users: Person[] = usersParsed.data.filter((row) => {
         const r = row as unknown[];
         return (r[0] as string) && (r[0] as string) !== 'Total de horas trabajadas';
       }).map((row, index: number) => {
@@ -212,7 +257,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       console.log('Assignments CSV text:', assignmentsText);
       const assignmentsParsed = Papa.parse(assignmentsText, { header: false, skipEmptyLines: true });
       console.log('Assignments parsed data:', assignmentsParsed.data);
-      const assignments: Assignment[] = assignmentsParsed.data.slice(1).map((row, index: number) => {
+      const assignments: Assignment[] = assignmentsParsed.data.map((row, index: number) => {
         const r = row as unknown[];
         return {
           id: (index + 1).toString(),
@@ -228,6 +273,111 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       set({ people: users, projects: projects, assignments: assignments });
     } catch (error) {
       console.error('Error loading data from CSV:', error);
+    }
+  },
+  deleteAssignment: (id) => {
+    console.log('deleteAssignment called with id:', id);
+    const state = get();
+    const assignmentToDelete = state.assignments.find(a => a.id === id);
+    if (!assignmentToDelete) {
+      console.log('Assignment not found:', id);
+      return;
+    }
+
+    console.log('Deleting assignment:', assignmentToDelete);
+    set((state) => ({
+      assignments: state.assignments.filter(a => a.id !== id),
+    }));
+  },
+  deletePerson: (id) => {
+    console.log('deletePerson called with id:', id);
+    const state = get();
+    const personToDelete = state.people.find(p => p.id === id);
+    if (!personToDelete) {
+      console.log('Person not found:', id);
+      return;
+    }
+
+    console.log('Deleting person:', personToDelete);
+    // Remove all assignments for this person
+    const updatedAssignments = state.assignments.filter(a => a.personId !== id);
+
+    set((state) => ({
+      people: state.people.filter(p => p.id !== id),
+      assignments: updatedAssignments,
+    }));
+  },
+  deleteProject: (id) => {
+    console.log('deleteProject called with id:', id);
+    const state = get();
+    const projectToDelete = state.projects.find(p => p.id === id);
+    if (!projectToDelete) {
+      console.log('Project not found:', id);
+      return;
+    }
+
+    console.log('Deleting project:', projectToDelete);
+    // Remove all assignments for this project
+    const updatedAssignments = state.assignments.filter(a => a.projectId !== id);
+
+    set((state) => ({
+      projects: state.projects.filter(p => p.id !== id),
+      assignments: updatedAssignments,
+    }));
+  },
+  saveAllData: async () => {
+    const state = get();
+    try {
+      // Save users
+      const usersResponse = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ users: state.people }),
+      });
+
+      if (!usersResponse.ok) {
+        throw new Error('Failed to save users');
+      }
+
+      // Save projects
+      const projectsResponse = await fetch('/api/projects', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projects: state.projects.map(p => ({
+            id: p.id,
+            name: p.name,
+            color: p.color,
+          }))
+        }),
+      });
+
+      if (!projectsResponse.ok) {
+        throw new Error('Failed to save projects');
+      }
+
+      // Save assignments
+      const assignmentsResponse = await fetch('/api/assignments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignments: state.assignments.map(a => ({
+            personId: a.personId,
+            projectId: a.projectId,
+            startDate: a.startDate instanceof Date && !isNaN(a.startDate.getTime()) ? a.startDate.toISOString() : a.startDate,
+            endDate: a.endDate instanceof Date && !isNaN(a.endDate.getTime()) ? a.endDate.toISOString() : a.endDate,
+            percentage: a.percentage,
+          }))
+        }),
+      });
+
+      if (!assignmentsResponse.ok) {
+        throw new Error('Failed to save assignments');
+      }
+
+      console.log('All data saved successfully');
+    } catch (error) {
+      console.error('Error saving all data:', error);
     }
   },
     }),
