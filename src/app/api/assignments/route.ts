@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid assignments data' }, { status: 400 });
     }
 
-    const csvPath = path.join(process.cwd(), 'public', 'assignments.csv');
+    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'assignments.csv');
     const csvContent = assignments.map(assignment =>
       `${assignment.personId};${assignment.projectId};${assignment.startDate};${assignment.endDate};${assignment.percentage}`
     ).join('\n') + '\n';

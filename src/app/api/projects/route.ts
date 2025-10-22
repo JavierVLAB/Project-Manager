@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid projects data' }, { status: 400 });
     }
 
-    const csvPath = path.join(process.cwd(), 'public', 'projects.csv');
+    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'projects.csv');
     const csvContent = projects.map(project =>
       `;${project.name};${project.color};;;;;;`
     ).join('\n') + '\n';
