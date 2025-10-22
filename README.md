@@ -123,11 +123,11 @@ src/
 version 0.1.0
 
 
-> for deploy 
+### for deploy 
 
 ````
 cd Project-Manager/
 git pull origin main
 chmod +x deploy.sh
 sh deploy.sh
-```
+````
