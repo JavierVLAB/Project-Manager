@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid project name' }, { status: 400 });
     }
 
-    const csvPath = path.join(process.cwd(), 'public', 'projects.csv');
+    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'projects.csv');
     const newRow = `;${name};;;;;;;\n`;
 
     await fs.appendFile(csvPath, newRow);
@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid projects data' }, { status: 400 });
     }
 
-    const csvPath = path.join(process.cwd(), 'public', 'projects.csv');
+    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'projects.csv');
     const csvContent = projects.map(project =>
       `;${project.name};${project.color};;;;;;`
     ).join('\n') + '\n';

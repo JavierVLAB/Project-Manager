@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid person name' }, { status: 400 });
     }
 
-    const csvPath = path.join(process.cwd(), 'public', 'users.csv');
+    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'users.csv');
     const newRow = `${name};;0;${';'.repeat(30)}\n`;
 
     await fs.appendFile(csvPath, newRow);
@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid users data' }, { status: 400 });
     }
 
-    const csvPath = path.join(process.cwd(), 'public', 'users.csv');
+    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'users.csv');
     const csvContent = users.map(user =>
       `${user.name};${user.id};0;${';'.repeat(30)}`
     ).join('\n') + '\n';
