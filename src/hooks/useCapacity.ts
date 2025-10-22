@@ -8,8 +8,8 @@ export const useCapacity = () => {
   const { getPersonCapacity, validateCapacity } = useCalendarStore();
 
   const getCapacityColor = (capacity: number): string => {
-    if (capacity <= 100) return 'green';
-    if (capacity <= 120) return 'yellow';
+    if (capacity < 75) return 'green';
+    if (capacity < 99) return 'yellow';
     return 'red';
   };
 
