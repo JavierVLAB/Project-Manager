@@ -71,7 +71,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Add Assignment</h2>
+        <h2 className="text-xl font-bold mb-4 text-gray-900">Add Assignment</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -80,7 +80,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
             <select
               value={personId}
               onChange={(e) => setPersonId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Select a person</option>
               {people.map((person) => (
@@ -98,7 +98,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Select a project</option>
               {projects.map((project) => (
@@ -117,7 +117,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
             {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>}
           </div>
@@ -129,7 +129,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
             {errors.endDate && <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>}
           </div>
@@ -143,7 +143,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
               max="100"
               value={percentage}
               onChange={(e) => setPercentage(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
             {errors.percentage && <p className="text-red-500 text-sm mt-1">{errors.percentage}</p>}
           </div>
@@ -151,7 +151,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
             </button>
