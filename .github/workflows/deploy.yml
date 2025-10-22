@@ -2,18 +2,26 @@ name: Deploy via Docker Compose
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
 
 jobs:
   deploy:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout
+      - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      - name: Construir y reiniciar con Docker Compose
+      - name: Mostrar versiones de Docker
         run: |
-          docker compose down
+          docker --version
+          docker compose version
+
+      - name: Construir y reiniciar con Docker Compose
+        working-directory: .
+        run: |
+          echo "🚀 Reiniciando aplicación..."
+          docker compose down || true
           docker compose up -d --build
           docker system prune -f
