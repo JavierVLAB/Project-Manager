@@ -223,7 +223,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
   loadData: async () => {
     try {
       // Load projects
-      const projectsResponse = await fetch('/projects.csv');
+      const projectsResponse = await fetch('/local_permanent/projects.csv');
       const projectsText = await projectsResponse.text();
       const projectsParsed = Papa.parse(projectsText, { header: false, skipEmptyLines: true });
       const projects: Project[] = projectsParsed.data.map((row, index: number) => {
@@ -236,7 +236,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       });
 
       // Load users
-      const usersResponse = await fetch('/users.csv');
+      const usersResponse = await fetch('/local_permanent/users.csv');
       const usersText = await usersResponse.text();
       const usersParsed = Papa.parse(usersText, { header: false, skipEmptyLines: true });
       const users: Person[] = usersParsed.data.filter((row) => {
@@ -252,7 +252,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       });
 
       // Load assignments
-      const assignmentsResponse = await fetch('/assignments.csv');
+      const assignmentsResponse = await fetch('/local_permanent/assignments.csv');
       const assignmentsText = await assignmentsResponse.text();
       console.log('Assignments CSV text:', assignmentsText);
       const assignmentsParsed = Papa.parse(assignmentsText, { header: false, skipEmptyLines: true });
