@@ -21,6 +21,7 @@ export default function Home() {
   const [selectedProjectForColor, setSelectedProjectForColor] = useState<string | null>(null);
   const [showDeletePersonDialog, setShowDeletePersonDialog] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -138,34 +139,46 @@ export default function Home() {
     setPersonToDelete(null);
   };
 
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
 
   const renderHomeView = () => (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className={`min-h-screen p-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Weekly Resource Calendar - MVP Iteration 3
-        </h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Weekly Resource Calendar - MVP Iteration 3
+          </h1>
+          <button
+            onClick={toggleTheme}
+            className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
+          >
+            {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+          </button>
+        </div>
 
         <div className="mb-6 flex items-center space-x-4">
           <button
             onClick={goToPreviousWeek}
-            className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+            className={`px-3 py-1 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-gray-600 text-white' : 'bg-gray-600 text-white'}`}
           >
             ‹ Anterior
           </button>
           <button
             onClick={goToToday}
-            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className={`px-3 py-1 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'}`}
           >
             Hoy
           </button>
           <button
             onClick={goToNextWeek}
-            className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+            className={`px-3 py-1 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-gray-600 text-white' : 'bg-gray-600 text-white'}`}
           >
             Siguiente ›
           </button>
-          <span className="text-gray-700">
+          <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Semana del {selectedWeek.toLocaleDateString('es-ES')} al {new Date(selectedWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')}
           </span>
         </div>
@@ -173,25 +186,25 @@ export default function Home() {
         <div className="mb-6 flex space-x-4">
           <button
             onClick={() => setAssignmentDialogOpen(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+            className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-purple-600 text-white' : 'bg-purple-600 text-white'}`}
           >
             Add Assignment
           </button>
           <button
             onClick={() => setCurrentView('edit-persons')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white'}`}
           >
             Edit Persons
           </button>
           <button
             onClick={() => setCurrentView('edit-projects')}
-            className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
+            className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-teal-600 text-white' : 'bg-teal-600 text-white'}`}
           >
             Edit Projects
           </button>
           <button
             onClick={saveAllData}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'}`}
           >
             Save All Data
           </button>
@@ -201,11 +214,11 @@ export default function Home() {
           <div className="flex-1">
             {/* Header with days */}
             <div className="mb-4 flex">
-              <div className="w-48 p-2 font-semibold text-gray-700 bg-gray-100 border rounded">Person</div>
+              <div className={`w-48 p-2 font-semibold border rounded ${isDarkMode ? 'text-gray-300 bg-gray-800' : 'text-gray-700 bg-gray-100'}`}>Person</div>
               {weekDays.map((day, index) => (
                 <div
                   key={day.date.toISOString()}
-                  className={`flex-1 p-2 text-center font-semibold text-gray-700 bg-gray-100 border rounded ${index < 6 ? 'mr-1' : ''}`}
+                  className={`flex-1 p-2 text-center font-semibold border rounded ${index < 6 ? 'mr-1' : ''} ${isDarkMode ? 'text-gray-300 bg-gray-800' : 'text-gray-700 bg-gray-100'}`}
                 >
                   <div className="text-sm">{day.dayName}</div>
                   <div className="text-lg">{day.dayNumber}</div>
@@ -257,60 +270,66 @@ export default function Home() {
   const renderEditPersonsView = () => {
 
     return (
-      <div className="min-h-screen bg-gray-100 p-8">
+      <div className={`min-h-screen p-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => setCurrentView('home')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-gray-600 text-white' : 'bg-gray-600 text-white'}`}
             >
               ← Home
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">Edit Persons</h1>
+            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Edit Persons</h1>
             <div className="flex space-x-2">
+              <button
+                onClick={toggleTheme}
+                className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
+              >
+                {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+              </button>
               <button
                 onClick={() => {
                   console.log('Add Person button clicked');
                   setPersonDialogOpen(true);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'}`}
               >
                 Add Person
               </button>
               <button
                 onClick={saveAllData}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'}`}
               >
                 Save All Data
               </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Persons List</h2>
+          <div className={`rounded-lg shadow-md overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`px-6 py-4 border-b ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+              <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Persons List</h2>
             </div>
-            <div className="divide-y divide-gray-200">
+            <div className={`divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
               {people.map((person) => (
-                <div key={person.id} className="p-6 hover:bg-gray-50 relative group">
+                <div key={person.id} className={`p-6 relative group ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex-1 grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Name</label>
                         <input
                           type="text"
                           value={person.name}
                           onChange={(e) => updatePerson(person.id, { name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 text-gray-900'}`}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                        <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Role</label>
                         <input
                           type="text"
                           value={person.role}
                           onChange={(e) => updatePerson(person.id, { role: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 text-gray-900'}`}
                         />
                       </div>
                     </div>
@@ -340,63 +359,69 @@ export default function Home() {
   const renderEditProjectsView = () => {
 
     return (
-      <div className="min-h-screen bg-gray-100 p-8">
+      <div className={`min-h-screen p-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => setCurrentView('home')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-gray-600 text-white' : 'bg-gray-600 text-white'}`}
             >
               ← Home
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">Edit Projects</h1>
+            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Edit Projects</h1>
             <div className="flex space-x-2">
+              <button
+                onClick={toggleTheme}
+                className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
+              >
+                {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+              </button>
               <button
                 onClick={() => {
                   console.log('Add Project button clicked');
                   setProjectDialogOpen(true);
                 }}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-green-600 text-white' : 'bg-green-600 text-white'}`}
               >
                 Add Project
               </button>
               <button
                 onClick={saveAllData}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'}`}
               >
                 Save All Data
               </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Projects List</h2>
+          <div className={`rounded-lg shadow-md overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`px-6 py-4 border-b ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+              <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Projects List</h2>
             </div>
-            <div className="divide-y divide-gray-200">
+            <div className={`divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
               {projects.map((project) => (
-                <div key={project.id} className="p-6 hover:bg-gray-50 relative group">
+                <div key={project.id} className={`p-6 relative group ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex-1 mr-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                      <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Project Name</label>
                       <input
                         type="text"
                         value={project.name}
                         onChange={(e) => updateProject(project.id, { name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 text-gray-900'}`}
                       />
                     </div>
                     <div className="flex items-center space-x-2">
-                      <label className="block text-sm font-medium text-gray-700">Color</label>
+                      <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Color</label>
                       <button
                         onClick={() => {
                           setSelectedProjectForColor(project.id);
                           setShowColorPicker(true);
                         }}
-                        className="w-12 h-10 border border-gray-300 rounded-md cursor-pointer flex items-center justify-center"
+                        className={`w-12 h-10 border rounded-md cursor-pointer flex items-center justify-center ${isDarkMode ? 'border-gray-600' : 'border-gray-300'}`}
                       >
                         <div
-                          className="w-8 h-8 rounded border border-gray-200"
+                          className={`w-8 h-8 rounded ${isDarkMode ? 'border-gray-500' : 'border-gray-200'}`}
                           style={{ backgroundColor: project.color }}
                         ></div>
                       </button>
@@ -438,15 +463,15 @@ export default function Home() {
         {/* Delete Person Confirmation Dialog */}
         {showDeletePersonDialog && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">Delete Person</h3>
-              <p className="text-gray-700 mb-6">
+            <div className={`rounded-lg p-6 w-full max-w-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Delete Person</h3>
+              <p className={`mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Are you sure you want to delete this person? This will also delete all their assignments and cannot be undone.
               </p>
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={handleDeletePersonCancel}
-                  className="px-4 py-2 text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className={`px-4 py-2 border rounded-md hover:opacity-80 ${isDarkMode ? 'text-gray-300 border-gray-600 bg-gray-700' : 'text-gray-800 border-gray-300 hover:bg-gray-50'}`}
                 >
                   Cancel
                 </button>
@@ -455,7 +480,7 @@ export default function Home() {
                     console.log('Delete button clicked in dialog');
                     handleDeletePersonConfirm();
                   }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className={`px-4 py-2 rounded-md hover:opacity-80 ${isDarkMode ? 'bg-red-600 text-white' : 'bg-red-600 text-white'}`}
                 >
                   Delete
                 </button>
@@ -468,14 +493,14 @@ export default function Home() {
         {/* Color Picker Modal */}
         {showColorPicker && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">Choose Color</h3>
+            <div className={`rounded-lg p-6 w-full max-w-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Choose Color</h3>
               <div className="grid grid-cols-5 gap-3 mb-4">
                 {colorPalette.map((color) => (
                   <button
                     key={color}
                     onClick={() => handleColorSelect(color)}
-                    className="w-12 h-12 rounded-lg border-2 border-gray-300 hover:border-gray-500 transition-colors"
+                    className={`w-12 h-12 rounded-lg border-2 transition-colors ${isDarkMode ? 'border-gray-600 hover:border-gray-400' : 'border-gray-300 hover:border-gray-500'}`}
                     style={{ backgroundColor: color }}
                     title={color}
                   />
@@ -487,7 +512,7 @@ export default function Home() {
                     setShowColorPicker(false);
                     setSelectedProjectForColor(null);
                   }}
-                  className="px-4 py-2 text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className={`px-4 py-2 border rounded-md hover:opacity-80 ${isDarkMode ? 'text-gray-300 border-gray-600 bg-gray-700' : 'text-gray-800 border-gray-300 hover:bg-gray-50'}`}
                 >
                   Cancel
                 </button>
@@ -513,14 +538,14 @@ export default function Home() {
         {/* Color Picker Modal */}
         {showColorPicker && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">Choose Color</h3>
+            <div className={`rounded-lg p-6 w-full max-w-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Choose Color</h3>
               <div className="grid grid-cols-5 gap-3 mb-4">
                 {colorPalette.map((color) => (
                   <button
                     key={color}
                     onClick={() => handleColorSelect(color)}
-                    className="w-12 h-12 rounded-lg border-2 border-gray-300 hover:border-gray-500 transition-colors"
+                    className={`w-12 h-12 rounded-lg border-2 transition-colors ${isDarkMode ? 'border-gray-600 hover:border-gray-400' : 'border-gray-300 hover:border-gray-500'}`}
                     style={{ backgroundColor: color }}
                     title={color}
                   />
@@ -532,7 +557,7 @@ export default function Home() {
                     setShowColorPicker(false);
                     setSelectedProjectForColor(null);
                   }}
-                  className="px-4 py-2 text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className={`px-4 py-2 border rounded-md hover:opacity-80 ${isDarkMode ? 'text-gray-300 border-gray-600 bg-gray-700' : 'text-gray-800 border-gray-300 hover:bg-gray-50'}`}
                 >
                   Cancel
                 </button>
