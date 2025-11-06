@@ -9,14 +9,15 @@ import { AddEditPersonDialog } from '@/components/AddEditPersonDialog';
 import { AddEditProjectDialog } from '@/components/AddEditProjectDialog';
 import { AddEditAssignmentDialog } from '@/components/AddEditAssignmentDialog';
 import { useCalendarStore } from '@/stores/calendarStore';
-import { pixelToDate, assignmentsOverlap, pixelWidthToDays, getWeekDays } from '@/utils/calendarUtils';
+import { pixelToDate, assignmentsOverlap, pixelWidthToDays, getWeekDays, getFirstMondayOfMonth, getLastSundayOfMonth } from '@/utils/calendarUtils';
 
 export default function Home() {
-  const { people, projects, assignments, updateAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, saveAllData, deleteAssignment, updatePerson, updateProject, updateProjectColor, deletePerson, deleteProject } = useCalendarStore();
+  const { people, projects, assignments, updateAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, saveAllData, deleteAssignment, updatePerson, updateProject, updateProjectColor, deletePerson, deleteProject, setSelectedWeek } = useCalendarStore();
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'edit-persons' | 'edit-projects'>('home' as 'home' | 'edit-persons' | 'edit-projects');
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedProjectForColor, setSelectedProjectForColor] = useState<string | null>(null);
   const [showDeletePersonDialog, setShowDeletePersonDialog] = useState(false);
@@ -26,7 +27,7 @@ export default function Home() {
     loadData();
   }, [loadData]);
 
-  const weekDays = getWeekDays(selectedWeek, 1);
+  const weekDays = getWeekDays(selectedWeek, viewMode === 'month' ? 4 : 1);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, delta } = event;
@@ -36,7 +37,7 @@ export default function Home() {
     const type = active.data.current?.type;
     if (!assignment) return;
 
-    const containerWidth = 700; // Approximate width for 1 week
+    const containerWidth = weekDays.length * 100; // Width based on number of days (100px per day)
 
     if (type === 'move') {
       // Calculate new start date based on drag
@@ -85,6 +86,23 @@ export default function Home() {
 
   const handleDateRangeChange = (assignmentId: string, startDate: Date, endDate: Date) => {
     updateAssignment(assignmentId, { startDate, endDate });
+  };
+
+  const goToPreviousMonth = () => {
+    const newDate = new Date(selectedWeek);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setSelectedWeek(newDate);
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(selectedWeek);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setSelectedWeek(newDate);
+  };
+
+  const goToCurrentMonth = () => {
+    const today = new Date();
+    setSelectedWeek(today);
   };
 
   const colorPalette = [
@@ -143,30 +161,33 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Weekly Resource Calendar - MVP Iteration 3
+          {viewMode === 'month' ? 'Monthly' : 'Weekly'} Resource Calendar - MVP Iteration 3
         </h1>
 
         <div className="mb-6 flex items-center space-x-4">
           <button
-            onClick={goToPreviousWeek}
+            onClick={viewMode === 'month' ? goToPreviousMonth : goToPreviousWeek}
             className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
           >
-            ‹ Anterior
+            ‹ {viewMode === 'month' ? 'Mes Anterior' : 'Anterior'}
           </button>
           <button
-            onClick={goToToday}
+            onClick={viewMode === 'month' ? goToCurrentMonth : goToToday}
             className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            Hoy
+            {viewMode === 'month' ? 'Mes Actual' : 'Hoy'}
           </button>
           <button
-            onClick={goToNextWeek}
+            onClick={viewMode === 'month' ? goToNextMonth : goToNextWeek}
             className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
           >
-            Siguiente ›
+            {viewMode === 'month' ? 'Mes Siguiente' : 'Siguiente'} ›
           </button>
           <span className="text-gray-700">
-            Semana del {selectedWeek.toLocaleDateString('es-ES')} al {new Date(selectedWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')}
+            {viewMode === 'month'
+              ? `Mes de ${selectedWeek.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`
+              : `Semana del ${selectedWeek.toLocaleDateString('es-ES')} al ${new Date(selectedWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')}`
+            }
           </span>
         </div>
 
@@ -190,6 +211,12 @@ export default function Home() {
             Edit Projects
           </button>
           <button
+            onClick={() => setViewMode(viewMode === 'week' ? 'month' : 'week')}
+            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+          >
+            {viewMode === 'week' ? 'Month View' : 'Week View'}
+          </button>
+          <button
             onClick={saveAllData}
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
           >
@@ -197,44 +224,51 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="flex space-x-6">
-          <div className="flex-1">
-            {/* Header with days */}
-            <div className="mb-4 flex">
-              <div className="w-48 p-2 font-semibold text-gray-700 bg-gray-100 border rounded">Person</div>
-              {weekDays.map((day, index) => (
-                <div
-                  key={day.date.toISOString()}
-                  className={`flex-1 p-2 text-center font-semibold text-gray-700 bg-gray-100 border rounded ${index < 6 ? 'mr-1' : ''}`}
-                >
-                  <div className="text-sm">{day.dayName}</div>
-                  <div className="text-lg">{day.dayNumber}</div>
-                </div>
-              ))}
-            </div>
+        <div className="flex">
+          {/* Scrollable calendar area */}
+          <div className="flex-1 overflow-x-auto">
+            <div className="min-w-max">
+              {/* Header with days */}
+              <div className="mb-4 flex">
+                <div className="w-48 p-2 font-semibold text-gray-700 bg-gray-100 border rounded">Person</div>
+                {weekDays.map((day, index) => (
+                  <div
+                    key={day.date.toISOString()}
+                    className={`w-24 p-2 text-center font-semibold text-gray-700 bg-gray-100 border rounded ${index < weekDays.length - 1 ? 'mr-1' : ''}`}
+                  >
+                    <div className="text-sm">{day.dayName}</div>
+                    <div className="text-lg">{day.dayNumber}</div>
+                  </div>
+                ))}
+              </div>
 
-            {/* Person rows */}
-            <div className="space-y-4">
-              {people.map((person) => {
-                const personAssignments = assignments.filter(
-                  (assignment) => assignment.personId === person.id
-                );
-                return (
-                  <PersonRow
-                    key={person.id}
-                    person={person}
-                    assignments={personAssignments}
-                    weekDays={weekDays}
-                    onPercentageChange={handlePercentageChange}
-                    onDateRangeChange={handleDateRangeChange}
-                    onDeleteAssignment={deleteAssignment}
-                  />
-                );
-              })}
+              {/* Person rows */}
+              <div className="space-y-4">
+                {people.map((person) => {
+                  const personAssignments = assignments.filter(
+                    (assignment) => assignment.personId === person.id
+                  );
+                  return (
+                    <PersonRow
+                      key={person.id}
+                      person={person}
+                      assignments={personAssignments}
+                      weekDays={weekDays}
+                      onPercentageChange={handlePercentageChange}
+                      onDateRangeChange={handleDateRangeChange}
+                      onDeleteAssignment={deleteAssignment}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <div className="sticky top-8 h-fit">
-            <ProjectLegend />
+
+          {/* Fixed Project Legend */}
+          <div className="ml-6 flex-shrink-0 w-64">
+            <div className="sticky top-8">
+              <ProjectLegend />
+            </div>
           </div>
         </div>
 

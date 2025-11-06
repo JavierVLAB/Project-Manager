@@ -54,9 +54,9 @@ export function calculateAssignmentPosition(
   endDate: Date,
   weekDays: WeekDay[]
 ): { left: number; width: number } | null {
-  const weekStart = weekDays[0].date;
-  const weekEnd = weekDays[6].date;
-
+  const periodStart = weekDays[0].date;
+  const periodEnd = weekDays[weekDays.length - 1].date;
+  const totalDays = weekDays.length;
 
   // Normalize dates to start of day to avoid timezone issues
   const normalizeToStartOfDay = (date: Date) => {
@@ -67,51 +67,27 @@ export function calculateAssignmentPosition(
 
   const normalizedStart = normalizeToStartOfDay(startDate);
   const normalizedEnd = normalizeToStartOfDay(endDate);
-  const normalizedWeekStart = normalizeToStartOfDay(weekStart);
-  const normalizedWeekEnd = normalizeToStartOfDay(weekEnd);
+  const normalizedPeriodStart = normalizeToStartOfDay(periodStart);
+  const normalizedPeriodEnd = normalizeToStartOfDay(periodEnd);
 
-  // If assignment is outside the week, return null
-  if (normalizedEnd < normalizedWeekStart || normalizedStart > normalizedWeekEnd) {
-    console.log('Assignment outside week range:', {
-      startDate: normalizedStart.toISOString().split('T')[0],
-      endDate: normalizedEnd.toISOString().split('T')[0],
-      weekStart: normalizedWeekStart.toISOString().split('T')[0],
-      weekEnd: normalizedWeekEnd.toISOString().split('T')[0],
-      startBeforeWeekStart: normalizedStart < normalizedWeekStart,
-      endAfterWeekEnd: normalizedEnd > normalizedWeekEnd
-    });
+  // If assignment is outside the period, return null
+  if (normalizedEnd < normalizedPeriodStart || normalizedStart > normalizedPeriodEnd) {
     return null;
   }
 
-  const effectiveStart = normalizedStart < normalizedWeekStart ? normalizedWeekStart : normalizedStart;
-  const effectiveEnd = normalizedEnd > normalizedWeekEnd ? normalizedWeekEnd : normalizedEnd;
+  const effectiveStart = normalizedStart < normalizedPeriodStart ? normalizedPeriodStart : normalizedStart;
+  const effectiveEnd = normalizedEnd > normalizedPeriodEnd ? normalizedPeriodEnd : normalizedEnd;
 
-  // Calculate day indices (0-6 for Mon-Sun)
-  const startIndex = Math.floor((effectiveStart.getTime() - normalizedWeekStart.getTime()) / (1000 * 60 * 60 * 24));
-  const endIndex = Math.floor((effectiveEnd.getTime() - normalizedWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+  // Calculate day indices
+  const startIndex = Math.floor((effectiveStart.getTime() - normalizedPeriodStart.getTime()) / (1000 * 60 * 60 * 24));
+  const endIndex = Math.floor((effectiveEnd.getTime() - normalizedPeriodStart.getTime()) / (1000 * 60 * 60 * 24));
 
   // Ensure indices are within valid range
-  const clampedStartIndex = Math.max(0, Math.min(6, startIndex));
-  const clampedEndIndex = Math.max(0, Math.min(6, endIndex));
+  const clampedStartIndex = Math.max(0, Math.min(totalDays - 1, startIndex));
+  const clampedEndIndex = Math.max(0, Math.min(totalDays - 1, endIndex));
 
-  const left = (clampedStartIndex / 7) * 100;
-  const width = ((clampedEndIndex - clampedStartIndex + 1) / 7) * 100;
-
-  // Debug logging for Monday assignments
-  if (clampedStartIndex === 0 || startIndex === 0) {
-    console.log('Monday assignment detected:', {
-      startDate: effectiveStart.toISOString().split('T')[0],
-      endDate: effectiveEnd.toISOString().split('T')[0],
-      weekStart: normalizedWeekStart.toISOString().split('T')[0],
-      rawStartIndex: startIndex,
-      rawEndIndex: endIndex,
-      clampedStartIndex,
-      clampedEndIndex,
-      left,
-      width,
-      shouldShow: width > 0 && left >= 0 && left < 100
-    });
-  }
+  const left = (clampedStartIndex / totalDays) * 100;
+  const width = ((clampedEndIndex - clampedStartIndex + 1) / totalDays) * 100;
 
   return { left, width };
 }
@@ -147,6 +123,35 @@ export function pixelWidthToDays(pixelWidth: number, containerWidth: number): nu
   const totalDays = 7;
   const pixelsPerDay = containerWidth / totalDays;
   return Math.max(1, Math.round(pixelWidth / pixelsPerDay));
+}
+
+/**
+ * Get the first Monday of the month containing the given date
+ */
+export function getFirstMondayOfMonth(date: Date): Date {
+  const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  const dayOfWeek = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+  // Calculate days to add to reach the first Monday
+  const daysToAdd = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
+  return new Date(firstDayOfMonth.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Get the last Sunday of the month containing the given date
+ */
+export function getLastSundayOfMonth(date: Date): Date {
+  const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  const dayOfWeek = lastDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+  // If last day is Sunday, return it
+  if (dayOfWeek === 0) {
+    return lastDayOfMonth;
+  }
+
+  // Otherwise, add days to reach the next Sunday
+  const daysToAdd = 7 - dayOfWeek;
+  return new Date(lastDayOfMonth.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
 }
 
 /**
