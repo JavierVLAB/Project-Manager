@@ -1,45 +1,52 @@
-import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const { name } = await request.json();
-
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json({ error: 'Invalid project name' }, { status: 400 });
-    }
-
-    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'projects.csv');
-    const newRow = `;${name};;;;;;;\n`;
-
-    await fs.appendFile(csvPath, newRow);
-
-    return NextResponse.json({ success: true });
+    const projects = await prisma.project.findMany();
+    return NextResponse.json({ projects });
   } catch (error) {
-    console.error('Error adding project to CSV:', error);
-    return NextResponse.json({ error: 'Failed to add project' }, { status: 500 });
+    console.error('Error fetching projects:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch projects' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function POST(request: Request) {
+  try {
+    const { name } = await request.json();
+    const newProject = await prisma.project.create({
+      data: { name },
+    });
+    return NextResponse.json(newProject);
+  } catch (error) {
+    console.error('Error creating project:', error);
+    return NextResponse.json(
+      { error: 'Failed to create project' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
   try {
     const { projects } = await request.json();
-
-    if (!Array.isArray(projects)) {
-      return NextResponse.json({ error: 'Invalid projects data' }, { status: 400 });
-    }
-
-    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'projects.csv');
-    const csvContent = projects.map(project =>
-      `;${project.name};${project.color};;;;;;`
-    ).join('\n') + '\n';
-
-    await fs.writeFile(csvPath, csvContent);
-
-    return NextResponse.json({ success: true });
+    await prisma.project.deleteMany();
+    const createdProjects = await prisma.project.createMany({
+      data: projects.map((project: any) => ({
+        id: project.id,
+        name: project.name,
+        color: project.color,
+      })),
+    });
+    return NextResponse.json({ success: true, count: createdProjects.count });
   } catch (error) {
-    console.error('Error saving projects to CSV:', error);
-    return NextResponse.json({ error: 'Failed to save projects' }, { status: 500 });
+    console.error('Error updating projects:', error);
+    return NextResponse.json(
+      { error: 'Failed to update projects' },
+      { status: 500 }
+    );
   }
 }

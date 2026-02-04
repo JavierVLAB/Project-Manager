@@ -12,6 +12,7 @@ interface AssignmentBarProps {
   onPercentageChange?: (assignmentId: string, percentage: number) => void;
   onDateRangeChange?: (assignmentId: string, startDate: Date, endDate: Date) => void;
   onDelete?: (assignmentId: string) => void;
+  onLayerChange?: (assignmentId: string, layer: number) => void;
   height: string | undefined;
   top: string;
 }
@@ -28,9 +29,22 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
   onPercentageChange,
   onDateRangeChange,
   onDelete,
+  onLayerChange,
   height,
   top,
 }) => {
+  
+  const handleLayerUp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newLayer = Math.max(0, (assignment.layer || 0) - 1);
+    onLayerChange?.(assignment.id, newLayer);
+  };
+  
+  const handleLayerDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newLayer = (assignment.layer || 0) + 1;
+    onLayerChange?.(assignment.id, newLayer);
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(assignment.percentage.toString());
   const [startDateValue, setStartDateValue] = useState(assignment.startDate.toISOString().split('T')[0]);
@@ -38,27 +52,15 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Temporarily disable drag functionality to test delete button
-  // const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-  //   id: `assignment-${assignment.id}`,
-  //   data: { assignment, weekDays, type: 'move' },
-  // });
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `assignment-${assignment.id}`,
+    data: { assignment, weekDays, type: 'move' },
+  });
 
-  // const { attributes: resizeAttributes, listeners: resizeListeners, setNodeRef: setResizeRef, transform: resizeTransform } = useDraggable({
-  //   id: `resize-${assignment.id}`,
-  //   data: { assignment, weekDays, type: 'resize' },
-  // });
-
-  const attributes = {};
-  const listeners = {};
-  const setNodeRef = () => {};
-  const transform = null;
-  const isDragging = false;
-
-  const resizeAttributes = {};
-  const resizeListeners = {};
-  const setResizeRef = () => {};
-  const resizeTransform = null;
+  const { attributes: resizeAttributes, listeners: resizeListeners, setNodeRef: setResizeRef, transform: resizeTransform } = useDraggable({
+    id: `resize-${assignment.id}`,
+    data: { assignment, weekDays, type: 'resize' },
+  });
 
   const position = calculateAssignmentPosition(
     assignment.startDate,
@@ -71,11 +73,11 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
   const project = projects.find((p) => p.id === assignment.projectId);
   const actualWidth = position.width;
 
-  const style = {
-    left: `${position.left}%`,
-    width: `${actualWidth}%`,
-    backgroundColor: project?.color || '#ccc',
-    transform: 'none',
+   const style = {
+     left: `${position.left}%`,
+     width: `${actualWidth}%`,
+     backgroundColor: project?.color || '#ccc',
+     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : 'none',
     opacity: 1,
     height,
     top,
@@ -145,21 +147,49 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
        {assignment.percentage}%
 
        {/* Delete button - appears on hover */}
-       {isHovered && (
-         <div
-           className="absolute -top-1 -right-1 w-4 h-4 z-20"
-           onMouseDown={(e) => {
-             e.stopPropagation();
-             e.preventDefault();
-             console.log('Delete button mouse down');
-           }}
-           onClick={handleDeleteClick}
-         >
-           <div className="w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-80 hover:opacity-100 transition-opacity cursor-pointer select-none">
-             ×
-           </div>
-         </div>
-       )}
+        {isHovered && (
+          <div className="absolute -top-1 -right-1 flex flex-col gap-1 z-20">
+            {/* Layer up button */}
+            <div
+              className="w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs opacity-80 hover:opacity-100 transition-opacity cursor-pointer select-none"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onClick={handleLayerUp}
+              title="Move up"
+            >
+              ↑
+            </div>
+            
+            {/* Layer down button */}
+            <div
+              className="w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs opacity-80 hover:opacity-100 transition-opacity cursor-pointer select-none"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onClick={handleLayerDown}
+              title="Move down"
+            >
+              ↓
+            </div>
+            
+            {/* Delete button */}
+            <div
+              className="w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-80 hover:opacity-100 transition-opacity cursor-pointer select-none"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                console.log('Delete button mouse down');
+              }}
+              onClick={handleDeleteClick}
+              title="Delete"
+            >
+              ×
+            </div>
+          </div>
+        )}
      </div>
 
       {/* Resize handle - Temporarily hidden */}
