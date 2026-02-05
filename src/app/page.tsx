@@ -10,17 +10,11 @@ import { AddEditPersonDialog } from '@/components/AddEditPersonDialog';
 import { AddEditProjectDialog } from '@/components/AddEditProjectDialog';
 import { AddEditAssignmentDialog } from '@/components/AddEditAssignmentDialog';
 import { useCalendarStore } from '@/stores/calendarStore';
-<<<<<<< Updated upstream
-import { pixelToDate, assignmentsOverlap, pixelWidthToDays, getWeekDays, getFirstMondayOfMonth, getLastSundayOfMonth } from '@/utils/calendarUtils';
-
-export default function Home() {
-  const { people, projects, assignments, updateAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, saveAllData, deleteAssignment, updatePerson, updateProject, updateProjectColor, deletePerson, deleteProject, setSelectedWeek } = useCalendarStore();
-=======
 import { pixelToDate, assignmentsOverlap, pixelWidthToDays, getWeekInfo } from '@/utils/calendarUtils';
 
 export default function Home() {
   const { people, projects, assignments, updateAssignment, addAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, saveAllData, deleteAssignment, updatePerson, updateProject, updateProjectColor, deletePerson, deleteProject, syncWithKimai, syncKimaiUsers, syncKimaiProjects, testKimaiConnection } = useCalendarStore();
->>>>>>> Stashed changes
+
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
@@ -35,58 +29,6 @@ export default function Home() {
     loadData();
   }, [loadData]);
 
-<<<<<<< Updated upstream
-  const weekDays = getWeekDays(selectedWeek, viewMode === 'month' ? 4 : 1);
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, delta } = event;
-    if (!active || !delta.x) return;
-
-    const assignment = active.data.current?.assignment;
-    const type = active.data.current?.type;
-    if (!assignment) return;
-
-    const containerWidth = weekDays.length * 100; // Width based on number of days (100px per day)
-
-    if (type === 'move') {
-      // Calculate new start date based on drag
-      const newStartDate = pixelToDate(delta.x, containerWidth, weekDays);
-
-      // Calculate duration
-      const durationMs = new Date(assignment.endDate).getTime() - new Date(assignment.startDate).getTime();
-      const newEndDate = new Date(newStartDate.getTime() + durationMs);
-
-      // Check for overlaps with other assignments for the same person
-      const personAssignments = assignments.filter(a => a.personId === assignment.personId && a.id !== assignment.id);
-      const hasOverlap = personAssignments.some(other =>
-        assignmentsOverlap({ startDate: newStartDate, endDate: newEndDate }, other)
-      );
-
-      if (!hasOverlap) {
-        updateAssignment(assignment.id, {
-          startDate: newStartDate,
-          endDate: newEndDate,
-        });
-      }
-      // If overlap, do nothing (could add feedback)
-    } else if (type === 'resize') {
-      // Calculate new width
-      const newDays = pixelWidthToDays(delta.x, containerWidth);
-      const newEndDate = new Date(assignment.startDate);
-      newEndDate.setDate(newEndDate.getDate() + newDays - 1); // -1 because start day counts
-
-      // Check for overlaps
-      const personAssignments = assignments.filter(a => a.personId === assignment.personId && a.id !== assignment.id);
-      const hasOverlap = personAssignments.some(other =>
-        assignmentsOverlap({ startDate: assignment.startDate, endDate: newEndDate }, other)
-      );
-
-      if (!hasOverlap && newDays >= 1) {
-        updateAssignment(assignment.id, {
-          endDate: newEndDate,
-        });
-      }
-=======
   const weeksInfo = getWeekInfo(selectedWeek, 8);
   
   // Admin state
@@ -115,7 +57,7 @@ export default function Home() {
       setFilteredPeople(activePeople);
     } else {
       setFilteredPeople(activePeople.filter(person => selectedPeople.includes(person.id)));
->>>>>>> Stashed changes
+
     }
   }, [selectedPeople, people]);
   
@@ -155,26 +97,9 @@ export default function Home() {
     updateAssignment(assignmentId, { startDate, endDate });
   };
 
-<<<<<<< Updated upstream
-  const goToPreviousMonth = () => {
-    const newDate = new Date(selectedWeek);
-    newDate.setMonth(newDate.getMonth() - 1);
-    setSelectedWeek(newDate);
-  };
-
-  const goToNextMonth = () => {
-    const newDate = new Date(selectedWeek);
-    newDate.setMonth(newDate.getMonth() + 1);
-    setSelectedWeek(newDate);
-  };
-
-  const goToCurrentMonth = () => {
-    const today = new Date();
-    setSelectedWeek(today);
-=======
   const handleLayerChange = (assignmentId: string, layer: number) => {
     updateAssignment(assignmentId, { layer });
->>>>>>> Stashed changes
+
   };
 
   const colorPalette = [
@@ -236,112 +161,6 @@ export default function Home() {
           {viewMode === 'month' ? 'Monthly' : 'Weekly'} Resource Calendar - MVP Iteration 3
         </h1>
 
-<<<<<<< Updated upstream
-        <div className="mb-6 flex items-center space-x-4">
-          <button
-            onClick={viewMode === 'month' ? goToPreviousMonth : goToPreviousWeek}
-            className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-          >
-            ‹ {viewMode === 'month' ? 'Mes Anterior' : 'Anterior'}
-          </button>
-          <button
-            onClick={viewMode === 'month' ? goToCurrentMonth : goToToday}
-            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            {viewMode === 'month' ? 'Mes Actual' : 'Hoy'}
-          </button>
-          <button
-            onClick={viewMode === 'month' ? goToNextMonth : goToNextWeek}
-            className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-          >
-            {viewMode === 'month' ? 'Mes Siguiente' : 'Siguiente'} ›
-          </button>
-          <span className="text-gray-700">
-            {viewMode === 'month'
-              ? `Mes de ${selectedWeek.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`
-              : `Semana del ${selectedWeek.toLocaleDateString('es-ES')} al ${new Date(selectedWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')}`
-            }
-          </span>
-        </div>
-
-        <div className="mb-6 flex space-x-4">
-          <button
-            onClick={() => setAssignmentDialogOpen(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-          >
-            Add Assignment
-          </button>
-          <button
-            onClick={() => setCurrentView('edit-persons')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            Edit Persons
-          </button>
-          <button
-            onClick={() => setCurrentView('edit-projects')}
-            className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
-          >
-            Edit Projects
-          </button>
-          <button
-            onClick={() => setViewMode(viewMode === 'week' ? 'month' : 'week')}
-            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
-          >
-            {viewMode === 'week' ? 'Month View' : 'Week View'}
-          </button>
-          <button
-            onClick={saveAllData}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            Save All Data
-          </button>
-        </div>
-
-        <div className="flex">
-          {/* Scrollable calendar area */}
-          <div className="flex-1 overflow-x-auto">
-            <div className="min-w-max">
-              {/* Header with days */}
-              <div className="mb-4 flex">
-                <div className="w-48 p-2 font-semibold text-gray-700 bg-gray-100 border rounded">Person</div>
-                {weekDays.map((day, index) => (
-                  <div
-                    key={day.date.toISOString()}
-                    className={`w-24 p-2 text-center font-semibold text-gray-700 bg-gray-100 border rounded ${index < weekDays.length - 1 ? 'mr-1' : ''}`}
-                  >
-                    <div className="text-sm">{day.dayName}</div>
-                    <div className="text-lg">{day.dayNumber}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Person rows */}
-              <div className="space-y-4">
-                {people.map((person) => {
-                  const personAssignments = assignments.filter(
-                    (assignment) => assignment.personId === person.id
-                  );
-                  return (
-                    <PersonRow
-                      key={person.id}
-                      person={person}
-                      assignments={personAssignments}
-                      weekDays={weekDays}
-                      onPercentageChange={handlePercentageChange}
-                      onDateRangeChange={handleDateRangeChange}
-                      onDeleteAssignment={deleteAssignment}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Fixed Project Legend */}
-          <div className="ml-6 flex-shrink-0 w-64">
-            <div className="sticky top-8">
-              <ProjectLegend />
-=======
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
@@ -530,7 +349,7 @@ export default function Home() {
                   Apply
                 </button>
               </div>
->>>>>>> Stashed changes
+
             </div>
           </div>
         </div>

@@ -100,14 +100,8 @@ export function calculateAssignmentPosition(
   endDate: Date,
   weekDays: WeekDay[]
 ): { left: number; width: number } | null {
-<<<<<<< Updated upstream
-  const periodStart = weekDays[0].date;
-  const periodEnd = weekDays[weekDays.length - 1].date;
-  const totalDays = weekDays.length;
-=======
   const weekStart = weekDays[0].date;
   const weekEnd = weekDays[6].date;
->>>>>>> Stashed changes
 
   // Normalize dates to start of day to avoid timezone issues
   const normalizeToStartOfDay = (date: Date) => {
@@ -118,13 +112,9 @@ export function calculateAssignmentPosition(
 
   const normalizedStart = normalizeToStartOfDay(startDate);
   const normalizedEnd = normalizeToStartOfDay(endDate);
-  const normalizedPeriodStart = normalizeToStartOfDay(periodStart);
-  const normalizedPeriodEnd = normalizeToStartOfDay(periodEnd);
+  const normalizedWeekStart = normalizeToStartOfDay(weekStart);
+  const normalizedWeekEnd = normalizeToStartOfDay(weekEnd);
 
-<<<<<<< Updated upstream
-  // If assignment is outside the period, return null
-  if (normalizedEnd < normalizedPeriodStart || normalizedStart > normalizedPeriodEnd) {
-=======
   // Debug logging for Camila's assignments
   const startStr = normalizedStart.toISOString();
   const endStr = normalizedEnd.toISOString();
@@ -146,28 +136,22 @@ export function calculateAssignmentPosition(
       startBeforeWeekStart: normalizedStart < normalizedWeekStart,
       endAfterWeekEnd: normalizedEnd > normalizedWeekEnd
     });
->>>>>>> Stashed changes
     return null;
   }
 
-  const effectiveStart = normalizedStart < normalizedPeriodStart ? normalizedPeriodStart : normalizedStart;
-  const effectiveEnd = normalizedEnd > normalizedPeriodEnd ? normalizedPeriodEnd : normalizedEnd;
+  const effectiveStart = normalizedStart < normalizedWeekStart ? normalizedWeekStart : normalizedStart;
+  const effectiveEnd = normalizedEnd > normalizedWeekEnd ? normalizedWeekEnd : normalizedEnd;
 
   // Calculate day indices
-  const startIndex = Math.floor((effectiveStart.getTime() - normalizedPeriodStart.getTime()) / (1000 * 60 * 60 * 24));
-  const endIndex = Math.floor((effectiveEnd.getTime() - normalizedPeriodStart.getTime()) / (1000 * 60 * 60 * 24));
+  const startIndex = Math.floor((effectiveStart.getTime() - normalizedWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+  const endIndex = Math.floor((effectiveEnd.getTime() - normalizedWeekStart.getTime()) / (1000 * 60 * 60 * 24));
 
   // Ensure indices are within valid range
-  const clampedStartIndex = Math.max(0, Math.min(totalDays - 1, startIndex));
-  const clampedEndIndex = Math.max(0, Math.min(totalDays - 1, endIndex));
+  const clampedStartIndex = Math.max(0, Math.min(6, startIndex));
+  const clampedEndIndex = Math.max(0, Math.min(6, endIndex));
 
-<<<<<<< Updated upstream
-  const left = (clampedStartIndex / totalDays) * 100;
-  const width = ((clampedEndIndex - clampedStartIndex + 1) / totalDays) * 100;
-=======
   const left = (clampedStartIndex / 7) * 100;
   const width = ((clampedEndIndex - clampedStartIndex + 1) / 7) * 100;
->>>>>>> Stashed changes
 
   return { left, width };
 }
