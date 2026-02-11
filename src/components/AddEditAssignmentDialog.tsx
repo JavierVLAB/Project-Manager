@@ -159,7 +159,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Select a person</option>
-              {people.map((person) => (
+               {people.filter(person => person.enabled !== false).map((person) => (
                 <option key={person.id} value={person.id}>
                   {person.name}
                 </option>
