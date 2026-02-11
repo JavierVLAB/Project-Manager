@@ -1,11 +1,20 @@
-FROM node:20-alpine
+FROM ubuntu:22.04
 
 WORKDIR /app
+
+# Install Node.js and required system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    openssl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install all dependencies (including devDependencies) for build
+# Install dependencies
 RUN npm ci
 
 # Copy source files
@@ -17,8 +26,8 @@ RUN npx prisma generate
 # Build the application
 RUN npm run build
 
-# Optional: Cleanup devDependencies to reduce image size
-RUN npm prune --only=production
+# Verify build exists
+RUN ls -la .next/
 
 # Expose port
 EXPOSE 3000

@@ -1,39 +1,10 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: project-manager-db
-    environment:
-      MYSQL_ROOT_PASSWORD: Ethics-Blast-Bloomers7
-      MYSQL_DATABASE: projectmanagerdb
-      MYSQL_USER: projectmanager
-      MYSQL_PASSWORD: Brewing4-Prankster-Strategic
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u projectmanager -pBrewing4-Prankster-Strategic"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    command: --default-authentication-plugin=mysql_native_password
-
   app:
     build: .
     container_name: project-manager-app
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: "mysql://projectmanager:password@mysql:3306/projectmanagerdb"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    volumes:
-      - .:/app
-      - /app/node_modules
-
-volumes:
-  mysql_data:
+      DATABASE_URL: "mysql://projectmanager:Brewing4-Prankster-Strategic@23.94.84.111:3307/projectmanagerdb"
