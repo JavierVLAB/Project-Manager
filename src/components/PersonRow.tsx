@@ -174,56 +174,56 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                               <div className="text-sm text-gray-700 flex-1">{project?.name || 'Unknown Project'}</div>
                             </div>
                             {!isViewOnly && (
-                              <button
-                                onClick={() => {
-                                  // If assignment spans multiple weeks, only remove it from current week
-                                  const normalizedWeekStart = new Date(week.startDate);
-                                  normalizedWeekStart.setHours(0, 0, 0, 0);
-                                  
-                                  const normalizedWeekEnd = new Date(week.endDate);
-                                  normalizedWeekEnd.setHours(0, 0, 0, 0);
-                                  
-                                  const normalizedStart = new Date(assignment.startDate);
-                                  normalizedStart.setHours(0, 0, 0, 0);
-                                  
-                                  const normalizedEnd = new Date(assignment.endDate);
-                                  normalizedEnd.setHours(0, 0, 0, 0);
-                                  
-                                  // Check if assignment spans beyond current week
-                                  const spansMultipleWeeks = normalizedStart < normalizedWeekStart || normalizedEnd > normalizedWeekEnd;
-                                  
-                                  if (spansMultipleWeeks) {
-                                    // Create new assignments for weeks before and after current week
-                                    if (normalizedStart < normalizedWeekStart) {
-                                      const beforeWeekAssignment = {
-                                        personId: assignment.personId,
-                                        projectId: assignment.projectId,
-                                        startDate: assignment.startDate,
-                                        endDate: new Date(week.startDate.getTime() - 24 * 60 * 60 * 1000), // Day before week starts
-                                        percentage: assignment.percentage
-                                      };
-                                      if (onAddAssignment) {
-                                        onAddAssignment(beforeWeekAssignment);
-                                      }
-                                    }
-                                    
-                                    if (normalizedEnd > normalizedWeekEnd) {
-                                      const afterWeekAssignment = {
-                                        personId: assignment.personId,
-                                        projectId: assignment.projectId,
-                                        startDate: new Date(week.endDate.getTime() + 24 * 60 * 60 * 1000), // Day after week ends
-                                        endDate: assignment.endDate,
-                                        percentage: assignment.percentage
-                                      };
-                                      if (onAddAssignment) {
-                                        onAddAssignment(afterWeekAssignment);
-                                      }
-                                    }
-                                  }
-                                  
-                                  // Delete the original assignment
-                                  onDeleteAssignment?.(assignment.id);
-                                }}
+                               <button
+                                 onClick={() => {
+                                   // If assignment spans multiple weeks, only remove it from current week
+                                   const normalizedWeekStart = new Date(week.startDate);
+                                   normalizedWeekStart.setUTCHours(0, 0, 0, 0);
+                                   
+                                   const normalizedWeekEnd = new Date(week.endDate);
+                                   normalizedWeekEnd.setUTCHours(0, 0, 0, 0);
+                                   
+                                   const normalizedStart = new Date(assignment.startDate);
+                                   normalizedStart.setUTCHours(0, 0, 0, 0);
+                                   
+                                   const normalizedEnd = new Date(assignment.endDate);
+                                   normalizedEnd.setUTCHours(0, 0, 0, 0);
+                                   
+                                   // Check if assignment spans beyond current week
+                                   const spansMultipleWeeks = normalizedStart < normalizedWeekStart || normalizedEnd > normalizedWeekEnd;
+                                   
+                                   if (spansMultipleWeeks) {
+                                     // Create new assignments for weeks before and after current week
+                                     if (normalizedStart < normalizedWeekStart) {
+                                       const beforeWeekAssignment = {
+                                         personId: assignment.personId,
+                                         projectId: assignment.projectId,
+                                         startDate: new Date(Date.UTC(normalizedStart.getFullYear(), normalizedStart.getMonth(), normalizedStart.getDate())),
+                                         endDate: new Date(Date.UTC(normalizedWeekStart.getFullYear(), normalizedWeekStart.getMonth(), normalizedWeekStart.getDate() - 1)),
+                                         percentage: assignment.percentage
+                                       };
+                                       if (onAddAssignment) {
+                                         onAddAssignment(beforeWeekAssignment);
+                                       }
+                                     }
+                                     
+                                     if (normalizedEnd > normalizedWeekEnd) {
+                                       const afterWeekAssignment = {
+                                         personId: assignment.personId,
+                                         projectId: assignment.projectId,
+                                         startDate: new Date(Date.UTC(normalizedWeekEnd.getFullYear(), normalizedWeekEnd.getMonth(), normalizedWeekEnd.getDate() + 1)),
+                                         endDate: new Date(Date.UTC(normalizedEnd.getFullYear(), normalizedEnd.getMonth(), normalizedEnd.getDate())),
+                                         percentage: assignment.percentage
+                                       };
+                                       if (onAddAssignment) {
+                                         onAddAssignment(afterWeekAssignment);
+                                       }
+                                     }
+                                   }
+                                   
+                                   // Delete the original assignment
+                                   onDeleteAssignment?.(assignment.id);
+                                 }}
                                 className="text-red-500 hover:text-red-700"
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,16 +246,16 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                                 onChange={(e) => {
                                   // If assignment spans multiple weeks, split it into individual week assignment
                                   const normalizedWeekStart = new Date(week.startDate);
-                                  normalizedWeekStart.setHours(0, 0, 0, 0);
+                                  normalizedWeekStart.setUTCHours(0, 0, 0, 0);
                                   
                                   const normalizedWeekEnd = new Date(week.endDate);
-                                  normalizedWeekEnd.setHours(0, 0, 0, 0);
+                                  normalizedWeekEnd.setUTCHours(0, 0, 0, 0);
                                   
                                   const normalizedStart = new Date(assignment.startDate);
-                                  normalizedStart.setHours(0, 0, 0, 0);
+                                  normalizedStart.setUTCHours(0, 0, 0, 0);
                                   
                                   const normalizedEnd = new Date(assignment.endDate);
-                                  normalizedEnd.setHours(0, 0, 0, 0);
+                                  normalizedEnd.setUTCHours(0, 0, 0, 0);
                                   
                                   // Check if assignment spans beyond current week
                                   const spansMultipleWeeks = normalizedStart < normalizedWeekStart || normalizedEnd > normalizedWeekEnd;
@@ -266,8 +266,8 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                                     const currentWeekAssignment = {
                                       personId: assignment.personId,
                                       projectId: assignment.projectId,
-                                      startDate: week.startDate,
-                                      endDate: week.endDate,
+                                      startDate: new Date(Date.UTC(week.startDate.getFullYear(), week.startDate.getMonth(), week.startDate.getDate())),
+                                      endDate: new Date(Date.UTC(week.endDate.getFullYear(), week.endDate.getMonth(), week.endDate.getDate())),
                                       percentage: newPercentage
                                     };
                                     
@@ -276,8 +276,8 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                                       const beforeWeekAssignment = {
                                         personId: assignment.personId,
                                         projectId: assignment.projectId,
-                                        startDate: assignment.startDate,
-                                        endDate: new Date(week.startDate.getTime() - 24 * 60 * 60 * 1000), // Day before week starts
+                                        startDate: new Date(Date.UTC(normalizedStart.getFullYear(), normalizedStart.getMonth(), normalizedStart.getDate())),
+                                        endDate: new Date(Date.UTC(normalizedWeekStart.getFullYear(), normalizedWeekStart.getMonth(), normalizedWeekStart.getDate() - 1)),
                                         percentage: assignment.percentage
                                       };
                                       if (onAddAssignment) {
@@ -289,8 +289,8 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                                       const afterWeekAssignment = {
                                         personId: assignment.personId,
                                         projectId: assignment.projectId,
-                                        startDate: new Date(week.endDate.getTime() + 24 * 60 * 60 * 1000), // Day after week ends
-                                        endDate: assignment.endDate,
+                                        startDate: new Date(Date.UTC(normalizedWeekEnd.getFullYear(), normalizedWeekEnd.getMonth(), normalizedWeekEnd.getDate() + 1)),
+                                        endDate: new Date(Date.UTC(normalizedEnd.getFullYear(), normalizedEnd.getMonth(), normalizedEnd.getDate())),
                                         percentage: assignment.percentage
                                       };
                                       if (onAddAssignment) {
@@ -336,7 +336,7 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           >
                             <option value="">Select a project</option>
-                            {projects.map((project) => (
+                            {projects.filter(project => project.visible).map((project) => (
                               <option key={project.id} value={project.id}>
                                 {project.name}
                               </option>

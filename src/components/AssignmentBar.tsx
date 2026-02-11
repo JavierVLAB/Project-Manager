@@ -71,6 +71,12 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
   if (!position) return null;
 
   const project = projects.find((p) => p.id === assignment.projectId);
+  
+  // Check if project is visible
+  if (!project?.visible) {
+    return null;
+  }
+  
   const actualWidth = position.width;
 
    const style = {
@@ -136,7 +142,11 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
       <div
        ref={setNodeRef}
        className="absolute rounded text-xs text-white flex items-center justify-center font-medium select-none relative group"
-       style={style}
+       style={{
+         ...style,
+         textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+         fontWeight: 'bold'
+       }}
        onClick={handleClick}
        onMouseEnter={() => setIsHovered(true)}
        onMouseLeave={() => setIsHovered(false)}

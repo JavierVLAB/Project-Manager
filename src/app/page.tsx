@@ -18,12 +18,14 @@ export default function Home() {
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'edit-persons' | 'edit-projects'>('home' as 'home' | 'edit-persons' | 'edit-projects');
+  const [currentView, setCurrentView] = useState<'home' | 'view-users' | 'edit-projects'>('home' as 'home' | 'view-users' | 'edit-projects');
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedProjectForColor, setSelectedProjectForColor] = useState<string | null>(null);
   const [showDeletePersonDialog, setShowDeletePersonDialog] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<string | null>(null);
+  const [showInvisible, setShowInvisible] = useState(true);
+  const [showDisabledUsers, setShowDisabledUsers] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -43,9 +45,9 @@ export default function Home() {
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>(people);
   
-  // Search results
+  // Search results - only show enabled users
   const searchResults = people.filter(person => 
-    person.name.toLowerCase().includes(searchQuery.toLowerCase())
+    person.enabled !== false && person.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   // Apply filters when search query or selected people change
@@ -65,7 +67,7 @@ export default function Home() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const ADMIN_USERNAME = 'Propelland';
-    const ADMIN_PASSWORD = 'Provisional123';
+    const ADMIN_PASSWORD = 'Facecloth-Catnap-Produce4';
     
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       setIsAdmin(true);
@@ -214,7 +216,7 @@ export default function Home() {
                 Add Assignment
               </button>
                <button
-                onClick={() => setCurrentView('edit-persons')}
+                onClick={() => setCurrentView('view-users')}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
               >
                 View Users
@@ -225,12 +227,7 @@ export default function Home() {
               >
                 View Projects
               </button>
-              <button
-                onClick={saveAllData}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Save All Data
-              </button>
+
               <button
                 onClick={syncWithKimai}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
@@ -428,7 +425,7 @@ export default function Home() {
     </div>
   );
 
-  const renderEditPersonsView = () => {
+  const renderViewUsersView = () => {
     // Check if user is admin before rendering edit-persons view
     if (!isAdmin) {
       return (
@@ -452,20 +449,20 @@ export default function Home() {
      return (
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
+           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => setCurrentView('home')}
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
             >
               ← Home
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">Edit Persons</h1>
+            <h1 className="text-3xl font-bold text-gray-900">View Users</h1>
             <div className="flex space-x-2">
               <button
-                onClick={saveAllData}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                onClick={() => setShowDisabledUsers(!showDisabledUsers)}
+                className={`px-4 py-2 rounded-md hover:bg-gray-700 ${showDisabledUsers ? 'bg-yellow-600 text-white' : 'bg-blue-600 text-white'}`}
               >
-                Save All Data
+                {showDisabledUsers ? 'Hide Disabled' : 'Show All'}
               </button>
             </div>
           </div>
@@ -481,7 +478,7 @@ export default function Home() {
               </button>
             </div>
             <div className="divide-y divide-gray-200">
-              {people.map((person) => (
+              {people.filter(person => showDisabledUsers || person.enabled).map((person) => (
                 <div key={person.id} className="p-6 hover:bg-gray-50 relative group">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 grid grid-cols-3 gap-4">
@@ -541,6 +538,8 @@ export default function Home() {
       );
     }
 
+
+
     return (
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-4xl mx-auto">
@@ -552,21 +551,12 @@ export default function Home() {
               ← Home
             </button>
             <h1 className="text-3xl font-bold text-gray-900">View Projects</h1>
-            <div className="flex space-x-2">
+             <div className="flex space-x-2">
               <button
-                onClick={() => {
-                  console.log('Add Project button clicked');
-                  setProjectDialogOpen(true);
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                onClick={() => setShowInvisible(!showInvisible)}
+                className={`px-4 py-2 rounded-md hover:bg-gray-700 ${showInvisible ? 'bg-yellow-600 text-white' : 'bg-blue-600 text-white'}`}
               >
-                Add Project
-              </button>
-              <button
-                onClick={saveAllData}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Save All Data
+                {showInvisible ? 'Hide Invisible' : 'Show All'}
               </button>
             </div>
           </div>
@@ -582,32 +572,43 @@ export default function Home() {
               </button>
             </div>
             <div className="divide-y divide-gray-200">
-              {projects.map((project) => (
+              {projects.filter(project => showInvisible || project.visible).map((project) => (
                 <div key={project.id} className="p-6 hover:bg-gray-50 relative group">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 mr-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
-                      <input
-                        type="text"
-                        value={project.name}
-                        readOnly
-                        className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-900"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <label className="block text-sm font-medium text-gray-700">Color</label>
-                      <button
-                        onClick={() => {
-                          setSelectedProjectForColor(project.id);
-                          setShowColorPicker(true);
-                        }}
-                        className="w-12 h-10 border border-gray-300 rounded-md cursor-pointer flex items-center justify-center"
-                      >
-                        <div
-                          className="w-8 h-8 rounded border border-gray-200"
-                          style={{ backgroundColor: project.color }}
-                        ></div>
-                      </button>
+                   <div className="flex items-center justify-between">
+                    <div className="flex-1 grid grid-cols-3 gap-4 mr-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                        <input
+                          type="text"
+                          value={project.name}
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-900"
+                        />
+                      </div>
+                       <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                        <input
+                          type="text"
+                          value={project.customer || ''}
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-900"
+                        />
+                      </div>
+                       <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Visible</label>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={project.visible}
+                            onChange={(e) => updateProject(project.id, { visible: e.target.checked })}
+                            disabled={true}
+                            className={`rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${!project.visible ? 'opacity-50 cursor-not-allowed' : 'opacity-50 cursor-not-allowed'}`}
+                          />
+                          <span className={`ml-2 text-sm ${!project.visible ? 'text-gray-400' : 'text-gray-700'}`}>
+                            {project.visible ? 'Visible' : 'Hidden'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -632,10 +633,10 @@ export default function Home() {
     );
   };
 
-  if (currentView === 'edit-persons') {
+  if (currentView === 'view-users') {
     return (
       <>
-        {renderEditPersonsView()}
+        {renderViewUsersView()}
 
         {/* Add Person Dialog */}
         <AddEditPersonDialog

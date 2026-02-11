@@ -20,6 +20,8 @@ model Project {
   id    String @id @default(cuid())
   name  String
   color String @default("#000000")
+  visible Boolean @default(true)
+  customer String?
   assignments Assignment[]
 
   @@map("projects")

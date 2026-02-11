@@ -22,15 +22,18 @@ export const AddEditProjectDialog: React.FC<AddEditProjectDialogProps> = ({
   const { addProject, updateProject } = useCalendarStore();
   const [name, setName] = useState('');
   const [color, setColor] = useState('#000000');
+  const [visible, setVisible] = useState(true);
   const [errors, setErrors] = useState<{ name?: string; color?: string }>({});
 
   useEffect(() => {
     if (project) {
       setName(project.name);
       setColor(project.color);
+      setVisible(project.visible !== undefined ? project.visible : true);
     } else {
       setName('');
       setColor('#000000');
+      setVisible(true);
     }
     setErrors({});
   }, [project, isOpen]);
@@ -48,9 +51,9 @@ export const AddEditProjectDialog: React.FC<AddEditProjectDialogProps> = ({
     if (!validate()) return;
 
     if (project) {
-      updateProject(project.id, { name: name.trim(), color });
+      updateProject(project.id, { name: name.trim(), color, visible });
     } else {
-      addProject({ name: name.trim(), color });
+      addProject({ name: name.trim(), color, visible });
     }
     onClose();
   };
@@ -87,6 +90,17 @@ export const AddEditProjectDialog: React.FC<AddEditProjectDialogProps> = ({
               className="w-full h-10 border border-gray-300 rounded-md"
             />
             {errors.color && <p className="text-red-500 text-sm mt-1">{errors.color}</p>}
+          </div>
+          <div className="mb-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={visible}
+                onChange={(e) => setVisible(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
+              <span className="text-sm font-medium text-gray-700">Visible</span>
+            </label>
           </div>
           <div className="flex justify-end space-x-2">
             <button

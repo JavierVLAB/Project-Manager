@@ -8,6 +8,8 @@ export interface Project {
   id: string;
   name: string;
   color: string;
+  visible: boolean;
+  customer?: string;
 }
 
 export interface Assignment {

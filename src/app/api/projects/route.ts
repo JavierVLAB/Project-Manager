@@ -3,7 +3,15 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const projects = await prisma.project.findMany();
+    const projects = await prisma.project.findMany({
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        visible: true,
+        customer: true,
+      },
+    });
     return NextResponse.json({ projects });
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -39,6 +47,8 @@ export async function PUT(request: Request) {
         id: project.id,
         name: project.name,
         color: project.color,
+        visible: project.visible !== undefined ? project.visible : true,
+        customer: project.customer,
       })),
     });
     return NextResponse.json({ success: true, count: createdProjects.count });

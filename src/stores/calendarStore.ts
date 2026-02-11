@@ -6,10 +6,15 @@ import Papa from 'papaparse';
 
 // Helper function to check if two assignments overlap in time
 function assignmentsOverlap(assignment1: Omit<Assignment, 'id'>, assignment2: Omit<Assignment, 'id'>): boolean {
-  const start1 = assignment1.startDate.getTime();
-  const end1 = assignment1.endDate.getTime();
-  const start2 = assignment2.startDate.getTime();
-  const end2 = assignment2.endDate.getTime();
+  // Convert dates to Date objects if they are strings
+  const getDate = (date: Date | string): Date => {
+    return typeof date === 'string' ? new Date(date) : date;
+  };
+
+  const start1 = getDate(assignment1.startDate).getTime();
+  const end1 = getDate(assignment1.endDate).getTime();
+  const start2 = getDate(assignment2.startDate).getTime();
+  const end2 = getDate(assignment2.endDate).getTime();
 
   return start1 <= end2 && start2 <= end1;
 }
@@ -19,38 +24,42 @@ function splitAssignmentIntoWeeks(assignment: Omit<Assignment, 'id'>): Omit<Assi
   const { startDate, endDate, ...rest } = assignment;
   const weeklyAssignments: Omit<Assignment, 'id'>[] = [];
 
+  // Convert dates to Date objects if they are strings
+  const getDate = (date: Date | string): Date => {
+    return typeof date === 'string' ? new Date(date) : date;
+  };
+
+  // The dates from the dialog are already in ISO week format (Monday to Sunday),
+  // so we can directly use them without any modification
+  const dialogStart = new Date(getDate(startDate).getTime());
+  dialogStart.setHours(0, 0, 0, 0);
+  const dialogEnd = new Date(getDate(endDate).getTime());
+  dialogEnd.setHours(0, 0, 0, 0);
+
   // Check if assignment is already a single week
-  const durationInDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const durationInDays = Math.ceil((dialogEnd.getTime() - dialogStart.getTime()) / (1000 * 60 * 60 * 24));
   if (durationInDays <= 7) {
-    // Normalize dates to 00:00:00
-    const normalizedStart = new Date(startDate);
-    normalizedStart.setHours(0, 0, 0, 0);
-    const normalizedEnd = new Date(endDate);
-    normalizedEnd.setHours(0, 0, 0, 0);
     weeklyAssignments.push({
       ...rest,
-      startDate: normalizedStart,
-      endDate: normalizedEnd,
+      startDate: dialogStart,
+      endDate: dialogEnd,
     });
     return weeklyAssignments;
   }
 
-  // Split into weekly segments
-  let currentStart = new Date(startDate);
-  currentStart.setHours(0, 0, 0, 0); // Normalize to start of day
-  while (currentStart <= endDate) {
-    // Find the end of the current week
+  // Split into weekly assignments
+  let currentStart = new Date(dialogStart);
+  const maxIterations = 53; // Maximum number of weeks in a year to prevent infinite loop
+  let iterationCount = 0;
+  
+  while (currentStart <= dialogEnd && iterationCount < maxIterations) {
     const currentEnd = new Date(currentStart);
-    // Get next Sunday
-    const daysUntilSunday = 7 - currentEnd.getDay();
-    currentEnd.setDate(currentEnd.getDate() + daysUntilSunday - 1);
-    currentEnd.setHours(0, 0, 0, 0); // Normalize to start of day
+    currentEnd.setDate(currentStart.getDate() + 6);
+    currentEnd.setHours(0, 0, 0, 0);
 
     // If the week ends after the assignment's end date, use the assignment's end date
-    if (currentEnd > endDate) {
-      const normalizedEnd = new Date(endDate);
-      normalizedEnd.setHours(0, 0, 0, 0);
-      currentEnd.setTime(normalizedEnd.getTime());
+    if (currentEnd > dialogEnd) {
+      currentEnd.setTime(dialogEnd.getTime());
     }
 
     // Add the weekly assignment
@@ -60,9 +69,12 @@ function splitAssignmentIntoWeeks(assignment: Omit<Assignment, 'id'>): Omit<Assi
       endDate: new Date(currentEnd),
     });
 
-    // Move to the next week
+    // Move to the next week (Monday)
+    currentStart = new Date(currentEnd);
     currentStart.setDate(currentEnd.getDate() + 1);
-    currentStart.setHours(0, 0, 0, 0); // Normalize to start of day
+    currentStart.setHours(0, 0, 0, 0);
+    
+    iterationCount++;
   }
 
   return weeklyAssignments;
@@ -146,7 +158,11 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     } : p),
   })),
   addProject: async (project) => {
-    const newProject = { ...project, id: Date.now().toString() };
+    const newProject = { 
+      ...project, 
+      id: Date.now().toString(),
+      visible: project.visible !== undefined ? project.visible : true
+    };
     set((state) => ({
       projects: [...state.projects, newProject],
     }));
@@ -155,7 +171,10 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       const response = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: project.name }),
+        body: JSON.stringify({ 
+          name: project.name,
+          visible: project.visible 
+        }),
       });
 
       if (!response.ok) {
@@ -184,7 +203,25 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
 
     // Check for existing assignments with the same projectId in the same week
     const state = get();
-    const existingAssignments = weeklyAssignments.filter(weeklyAssignment => {
+    
+    // Normalize weekly assignments to UTC for comparison with database assignments
+    const normalizedWeeklyAssignments = weeklyAssignments.map(weekly => ({
+      ...weekly,
+      startDate: new Date(Date.UTC(
+        weekly.startDate.getFullYear(),
+        weekly.startDate.getMonth(),
+        weekly.startDate.getDate(),
+        0, 0, 0, 0
+      )),
+      endDate: new Date(Date.UTC(
+        weekly.endDate.getFullYear(),
+        weekly.endDate.getMonth(),
+        weekly.endDate.getDate(),
+        0, 0, 0, 0
+      ))
+    }));
+    
+    const existingAssignments = normalizedWeeklyAssignments.filter(weeklyAssignment => {
       const existing = state.assignments.find(a => 
         a.personId === weeklyAssignment.personId && 
         a.projectId === weeklyAssignment.projectId && 
@@ -362,29 +399,36 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     return { selectedWeek: nextWeek };
   }),
   goToToday: () => set({ selectedWeek: snapToWeek(new Date()) }),
-   loadData: async () => {
-     try {
-       // Load projects
-       const projectsResponse = await fetch('/api/projects');
-       const projectsData = await projectsResponse.json();
-       
-       // Load users
-       const usersResponse = await fetch('/api/users');
-       const usersData = await usersResponse.json();
-       
-       // Load assignments
-       const assignmentsResponse = await fetch('/api/assignments');
-       const assignmentsData = await assignmentsResponse.json();
-       
-       set({ 
-         people: (usersData.users as Person[]).sort((a, b) => a.name.localeCompare(b.name)), 
-         projects: (projectsData.projects as Project[]).sort((a, b) => a.name.localeCompare(b.name)), 
-         assignments: assignmentsData.assignments 
-       });
-     } catch (error) {
-       console.error('Error loading data from database:', error);
-     }
-   },
+    loadData: async () => {
+      try {
+        // Load projects
+        const projectsResponse = await fetch('/api/projects');
+        const projectsData = await projectsResponse.json();
+        
+        // Load users
+        const usersResponse = await fetch('/api/users');
+        const usersData = await usersResponse.json();
+        
+        // Load assignments
+        const assignmentsResponse = await fetch('/api/assignments');
+        const assignmentsData = await assignmentsResponse.json();
+        
+        // Convert assignment dates from strings to Date objects
+        const parsedAssignments = assignmentsData.assignments.map((assignment: any) => ({
+          ...assignment,
+          startDate: new Date(assignment.startDate),
+          endDate: new Date(assignment.endDate)
+        }));
+        
+        set({ 
+          people: (usersData.users as Person[] || []).sort((a: Person, b: Person) => a.name.localeCompare(b.name)), 
+          projects: (projectsData.projects as Project[] || []).sort((a: Project, b: Project) => a.name.localeCompare(b.name)), 
+          assignments: parsedAssignments 
+        });
+      } catch (error) {
+        console.error('Error loading data from database:', error);
+      }
+    },
    deleteAssignment: async (id) => {
     console.log('deleteAssignment called with id:', id);
     const state = get();

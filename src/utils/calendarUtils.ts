@@ -38,7 +38,7 @@ export function getWeekInfo(startDate: Date, weeks: number = 8): WeekInfo[] {
  * Calculate ISO week number (1-53) for a given date
  * https://en.wikipedia.org/wiki/ISO_week_date
  */
-function getISOWeekNumber(date: Date): number {
+export function getISOWeekNumber(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7; // Monday is 1, Sunday is 7
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -160,10 +160,27 @@ export function calculateAssignmentPosition(
  * Snap a date to the nearest week boundary (Monday)
  */
 export function snapToWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
-  return new Date(d.setDate(diff));
+  // Create a new date object to avoid modifying the original
+  const d = new Date(date.getTime());
+  const day = d.getDay(); // Use local time day of week
+  
+  let diff: number;
+  if (day === 1) {
+    // Already Monday
+    diff = 0;
+  } else if (day === 0) {
+    // Sunday, snap back to previous Monday (6 days ago)
+    diff = -6;
+  } else {
+    // Other days, snap to previous Monday (day - 1 days ago)
+    diff = 1 - day;
+  }
+  
+  // Calculate the snapped date in local time
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  
+  return d;
 }
 
 /**
@@ -222,20 +239,25 @@ export function getLastSundayOfMonth(date: Date): Date {
  * Check if two assignments overlap for the same person
  */
 export function assignmentsOverlap(
-  assignment1: { startDate: Date; endDate: Date },
-  assignment2: { startDate: Date; endDate: Date }
+  assignment1: { startDate: Date | string; endDate: Date | string },
+  assignment2: { startDate: Date | string; endDate: Date | string }
 ): boolean {
-  // Normalize dates to start of day to avoid time component issues
+  // Ensure dates are Date objects
+  const toDate = (date: Date | string) => {
+    return typeof date === 'string' ? new Date(date) : new Date(date.getTime());
+  };
+
+  // Normalize dates to start of day in UTC to avoid time component issues
   const normalizeToStartOfDay = (date: Date) => {
     const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
+    d.setUTCHours(0, 0, 0, 0);
     return d;
   };
 
-  const normalizedStart1 = normalizeToStartOfDay(assignment1.startDate);
-  const normalizedEnd1 = normalizeToStartOfDay(assignment1.endDate);
-  const normalizedStart2 = normalizeToStartOfDay(assignment2.startDate);
-  const normalizedEnd2 = normalizeToStartOfDay(assignment2.endDate);
+  const normalizedStart1 = normalizeToStartOfDay(toDate(assignment1.startDate));
+  const normalizedEnd1 = normalizeToStartOfDay(toDate(assignment1.endDate));
+  const normalizedStart2 = normalizeToStartOfDay(toDate(assignment2.startDate));
+  const normalizedEnd2 = normalizeToStartOfDay(toDate(assignment2.endDate));
 
   // Always treat gray (2026-01-27 to 2026-01-30) and purple (2026-01-30 to 2026-01-30) as overlapping
   const isGray = normalizedStart1.toISOString().split('T')[0] === '2026-01-27' && normalizedEnd1.toISOString().split('T')[0] === '2026-01-30';

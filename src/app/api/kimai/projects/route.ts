@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getKimaiProjects, syncKimaiProjects, testKimaiConnection } from '@/lib/kimai';
-import { prisma } from '@/lib/prisma';
+import { syncKimaiProjects, testKimaiConnection } from '@/lib/kimai';
 
 export async function GET() {
   try {
@@ -13,7 +12,7 @@ export async function GET() {
       );
     }
 
-    const projects = await getKimaiProjects();
+    const projects = await syncKimaiProjects();
     return NextResponse.json({ projects });
   } catch (error) {
     console.error('Error fetching Kimai projects:', error);
@@ -35,43 +34,12 @@ export async function POST() {
       );
     }
 
-    const kimaiProjects = await syncKimaiProjects();
-
-    // Synchronize with local database
-    const existingProjects = await prisma.project.findMany();
-    const existingProjectIds = existingProjects.map(project => project.id);
-
-    const projectsToCreate = kimaiProjects.filter(project => !existingProjectIds.includes(project.id));
-    const projectsToUpdate = kimaiProjects.filter(project => existingProjectIds.includes(project.id));
-
-    // Create new projects
-    if (projectsToCreate.length > 0) {
-      await prisma.project.createMany({
-        data: projectsToCreate.map(project => ({
-          id: project.id,
-          name: project.name,
-          color: project.color,
-        })),
-      });
-    }
-
-    // Update existing projects
-    for (const project of projectsToUpdate) {
-      await prisma.project.update({
-        where: { id: project.id },
-        data: {
-          name: project.name,
-          color: project.color,
-        },
-      });
-    }
+    const projects = await syncKimaiProjects();
 
     return NextResponse.json({
       success: true,
-      syncedProjects: kimaiProjects.length,
-      createdProjects: projectsToCreate.length,
-      updatedProjects: projectsToUpdate.length,
-      projects: kimaiProjects,
+      syncedProjects: projects.length,
+      projects,
     });
   } catch (error) {
     console.error('Error synchronizing Kimai projects:', error);

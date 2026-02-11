@@ -38,14 +38,13 @@ export async function getKimaiUsers() {
   }));
 }
 
-// Function to fetch all visible projects from Kimai
+// Function to fetch all projects from Kimai (including invisible ones)
 export async function getKimaiProjects() {
   const pool = await getKimaiConnection();
   const [projects] = await pool.execute(`
-    SELECT p.id, p.name, p.color, c.name as customer_name
+    SELECT p.id, p.name, p.color, c.name as customer_name, p.visible
     FROM kimai2_projects p
     LEFT JOIN kimai2_customers c ON p.customer_id = c.id
-    WHERE p.visible = 1
   `);
   
   return (projects as any[]).map((project: any) => ({
@@ -53,6 +52,7 @@ export async function getKimaiProjects() {
     name: project.name,
     customer: project.customer_name,
     color: project.color || '#000000', // Default color if null
+    visible: Boolean(project.visible),
   }));
 }
 
@@ -79,21 +79,71 @@ export async function syncKimaiUsers() {
 // Function to synchronize Kimai projects with local database
 export async function syncKimaiProjects() {
   const kimaiProjects = await getKimaiProjects();
-  console.log(`Found ${kimaiProjects.length} visible projects in Kimai`);
+  console.log(`Found ${kimaiProjects.length} projects in Kimai (${kimaiProjects.filter(p => p.visible).length} visible)`);
   
   // Synchronize with local database
-  await prisma.project.deleteMany();
-  const createdProjects = await prisma.project.createMany({
-    data: kimaiProjects.map(project => ({
-      id: project.id,
-      name: project.name,
-      color: project.color,
-    })),
-  });
+  const existingProjects = await prisma.project.findMany();
+  const existingProjectIds = existingProjects.map(project => project.id);
+  const kimaiProjectIds = kimaiProjects.map(project => project.id);
   
-  console.log(`Synchronized ${createdProjects.count} projects to local database`);
+  // Projects to create (not in local database)
+  const projectsToCreate = kimaiProjects.filter(project => !existingProjectIds.includes(project.id));
+  if (projectsToCreate.length > 0) {
+    await prisma.project.createMany({
+      data: projectsToCreate.map(project => ({
+        id: project.id,
+        name: project.name,
+        color: project.color,
+        visible: project.visible,
+        customer: project.customer,
+      })),
+    });
+  }
   
-  return kimaiProjects;
+  // Projects to update (already in local database)
+  const projectsToUpdate = kimaiProjects.filter(project => existingProjectIds.includes(project.id));
+  for (const project of projectsToUpdate) {
+    await prisma.project.update({
+      where: { id: project.id },
+      data: {
+        name: project.name,
+        color: project.color,
+        visible: project.visible,
+        customer: project.customer,
+      },
+    });
+  }
+  
+  // Projects to delete (no longer in Kimai)
+  const projectsToDelete = existingProjects.filter(project => 
+    !kimaiProjectIds.includes(project.id)
+  );
+  for (const project of projectsToDelete) {
+    try {
+      await prisma.project.delete({
+        where: { id: project.id },
+      });
+    } catch (error) {
+      console.error(`Failed to delete project ${project.id}:`, error);
+      // Continue with other deletions if one fails
+    }
+  }
+  
+  // Projects to mark as invisible (still in Kimai but now invisible)
+  const projectsToMarkInvisible = existingProjects.filter(project => 
+    kimaiProjectIds.includes(project.id) && 
+    (kimaiProjects.find(p => p.id === project.id)?.visible === false)
+  );
+  for (const project of projectsToMarkInvisible) {
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { visible: false },
+    });
+  }
+  
+  console.log(`Synchronized projects: ${projectsToCreate.length} created, ${projectsToUpdate.length} updated, ${projectsToMarkInvisible.length} marked as invisible`);
+  
+  return await prisma.project.findMany();
 }
 
 // Function to test Kimai connection
