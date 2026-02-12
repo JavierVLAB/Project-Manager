@@ -62,16 +62,44 @@ export async function syncKimaiUsers() {
   console.log(`Found ${kimaiUsers.length} users in Kimai (${kimaiUsers.filter(u => u.enabled).length} enabled)`);
   
   // Synchronize with local database
-  await prisma.person.deleteMany();
-  const createdUsers = await prisma.person.createMany({
-    data: kimaiUsers.map(user => ({
-      id: user.id,
-      name: user.name,
-      enabled: user.enabled !== undefined ? user.enabled : true,
-    })),
-  });
-  
-  console.log(`Synchronized ${createdUsers.count} users to local database`);
+  const existingPeople = await prisma.person.findMany();
+  const existingPersonIds = existingPeople.map(p => p.id);
+  const kimaiUserIds = kimaiUsers.map(u => u.id);
+
+  // Users to create (not in local database)
+  const usersToCreate = kimaiUsers.filter(user => !existingPersonIds.includes(user.id));
+  if (usersToCreate.length > 0) {
+    await prisma.person.createMany({
+      data: usersToCreate.map(user => ({
+        id: user.id,
+        name: user.name,
+        enabled: user.enabled !== undefined ? user.enabled : true,
+      })),
+    });
+  }
+
+  // Users to update (already in local database)
+  const usersToUpdate = kimaiUsers.filter(user => existingPersonIds.includes(user.id));
+  for (const user of usersToUpdate) {
+    await prisma.person.update({
+      where: { id: user.id },
+      data: {
+        name: user.name,
+        enabled: user.enabled !== undefined ? user.enabled : true,
+      },
+    });
+  }
+
+  // Users to disable (no longer in Kimai - we don't delete to preserve history)
+  const usersToDisable = existingPeople.filter(p => !kimaiUserIds.includes(p.id) && p.enabled);
+  for (const person of usersToDisable) {
+    await prisma.person.update({
+      where: { id: person.id },
+      data: { enabled: false },
+    });
+  }
+
+  console.log(`Synchronized users: ${usersToCreate.length} created, ${usersToUpdate.length} updated, ${usersToDisable.length} disabled`);
   
   return kimaiUsers;
 }
@@ -114,33 +142,20 @@ export async function syncKimaiProjects() {
     });
   }
   
-  // Projects to delete (no longer in Kimai)
-  const projectsToDelete = existingProjects.filter(project => 
-    !kimaiProjectIds.includes(project.id)
-  );
-  for (const project of projectsToDelete) {
-    try {
-      await prisma.project.delete({
-        where: { id: project.id },
-      });
-    } catch (error) {
-      console.error(`Failed to delete project ${project.id}:`, error);
-      // Continue with other deletions if one fails
-    }
-  }
-  
-  // Projects to mark as invisible (still in Kimai but now invisible)
+  // Projects to mark as invisible (no longer in Kimai or marked invisible in Kimai)
   const projectsToMarkInvisible = existingProjects.filter(project => 
-    kimaiProjectIds.includes(project.id) && 
+    !kimaiProjectIds.includes(project.id) || 
     (kimaiProjects.find(p => p.id === project.id)?.visible === false)
   );
   for (const project of projectsToMarkInvisible) {
-    await prisma.project.update({
-      where: { id: project.id },
-      data: { visible: false },
-    });
+    if (project.visible) {
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { visible: false },
+      });
+    }
   }
-  
+
   console.log(`Synchronized projects: ${projectsToCreate.length} created, ${projectsToUpdate.length} updated, ${projectsToMarkInvisible.length} marked as invisible`);
   
   return await prisma.project.findMany();
