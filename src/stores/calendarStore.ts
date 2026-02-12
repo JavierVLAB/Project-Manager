@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Person, Project, Assignment } from '@/types';
 import { snapToWeek } from '@/utils/calendarUtils';
-import Papa from 'papaparse';
 
 // Helper function to check if two assignments overlap in time
 function assignmentsOverlap(assignment1: Omit<Assignment, 'id'>, assignment2: Omit<Assignment, 'id'>): boolean {
@@ -414,7 +413,11 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
         const assignmentsData = await assignmentsResponse.json();
         
         // Convert assignment dates from strings to Date objects
-        const parsedAssignments = assignmentsData.assignments.map((assignment: any) => ({
+        const parsedAssignments = assignmentsData.assignments.map((assignment: {
+          startDate: string;
+          endDate: string;
+          [key: string]: unknown;
+        }) => ({
           ...assignment,
           startDate: new Date(assignment.startDate),
           endDate: new Date(assignment.endDate)

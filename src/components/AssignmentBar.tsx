@@ -52,12 +52,12 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `assignment-${assignment.id}`,
     data: { assignment, weekDays, type: 'move' },
   });
 
-  const { attributes: resizeAttributes, listeners: resizeListeners, setNodeRef: setResizeRef, transform: resizeTransform } = useDraggable({
+  const { attributes: resizeAttributes, listeners: resizeListeners, setNodeRef: setResizeRef } = useDraggable({
     id: `resize-${assignment.id}`,
     data: { assignment, weekDays, type: 'resize' },
   });

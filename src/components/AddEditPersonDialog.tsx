@@ -19,7 +19,7 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
   onClose,
   person,
 }) => {
-  const { addPerson, updatePerson } = useCalendarStore();
+  const { updatePerson } = useCalendarStore();
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<{ name?: string }>({});
 

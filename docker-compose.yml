@@ -1,8 +1,14 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: project-manager-app
+    restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: "mysql://projectmanager:Brewing4-Prankster-Strategic@23.94.84.111:3307/projectmanagerdb"
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1

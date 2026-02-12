@@ -2,24 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { Person } from '@/types';
-import { DragEndEvent } from '@dnd-kit/core';
-import { WeeklyGrid } from '@/components/WeeklyGrid';
 import { PersonRow } from '@/components/PersonRow';
-import { ProjectLegend } from '@/components/ProjectLegend';
 import { AddEditPersonDialog } from '@/components/AddEditPersonDialog';
 import { AddEditProjectDialog } from '@/components/AddEditProjectDialog';
 import { AddEditAssignmentDialog } from '@/components/AddEditAssignmentDialog';
 import { useCalendarStore } from '@/stores/calendarStore';
-import { pixelToDate, assignmentsOverlap, pixelWidthToDays, getWeekInfo } from '@/utils/calendarUtils';
+import { getWeekInfo } from '@/utils/calendarUtils';
 
 export default function Home() {
-  const { people, projects, assignments, updateAssignment, addAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, saveAllData, deleteAssignment, updatePerson, updateProject, updateProjectColor, deletePerson, deleteProject, syncWithKimai, syncKimaiUsers, syncKimaiProjects, testKimaiConnection } = useCalendarStore();
+  const { people, projects, assignments, updateAssignment, addAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, deleteAssignment, updateProject, updateProjectColor, deletePerson, deleteProject, syncWithKimai, syncKimaiUsers, syncKimaiProjects } = useCalendarStore();
 
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'view-users' | 'edit-projects'>('home' as 'home' | 'view-users' | 'edit-projects');
-  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedProjectForColor, setSelectedProjectForColor] = useState<string | null>(null);
   const [showDeletePersonDialog, setShowDeletePersonDialog] = useState(false);
@@ -86,22 +82,8 @@ export default function Home() {
     setLoginError('');
   };
 
-  // Drag functionality temporarily disabled for weekly view
-  const handleDragEnd = (event: DragEndEvent) => {
-    return;
-  };
-
   const handlePercentageChange = (assignmentId: string, percentage: number) => {
     updateAssignment(assignmentId, { percentage });
-  };
-
-  const handleDateRangeChange = (assignmentId: string, startDate: Date, endDate: Date) => {
-    updateAssignment(assignmentId, { startDate, endDate });
-  };
-
-  const handleLayerChange = (assignmentId: string, layer: number) => {
-    updateAssignment(assignmentId, { layer });
-
   };
 
   const colorPalette = [
@@ -135,12 +117,6 @@ export default function Home() {
     }
   };
 
-  const handleDeletePersonClick = (personId: string) => {
-    console.log('handleDeletePersonClick called with personId:', personId);
-    setPersonToDelete(personId);
-    setShowDeletePersonDialog(true);
-  };
-
   const handleDeletePersonConfirm = () => {
     console.log('handleDeletePersonConfirm called with personToDelete:', personToDelete);
     if (personToDelete) {
@@ -160,7 +136,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          {viewMode === 'month' ? 'Monthly' : 'Weekly'} Resource Calendar - MVP Iteration 3
+          Weekly Resource Calendar - MVP Iteration 3
         </h1>
 
         <div className="mb-6 flex items-center justify-between">
@@ -268,9 +244,7 @@ export default function Home() {
                     assignments={personAssignments}
                     weeksInfo={weeksInfo}
                     onPercentageChange={handlePercentageChange}
-                    onDateRangeChange={handleDateRangeChange}
                     onDeleteAssignment={deleteAssignment}
-                    onLayerChange={handleLayerChange}
                     onAddAssignment={addAssignment}
                     isViewOnly={!isAdmin}
                   />

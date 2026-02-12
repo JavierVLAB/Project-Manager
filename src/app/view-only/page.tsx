@@ -90,9 +90,7 @@ export default function ViewOnlyPage() {
                     assignments={personAssignments}
                     weeksInfo={weeksInfo}
                     onPercentageChange={() => {}} // Empty function for view-only
-                    onDateRangeChange={() => {}} // Empty function for view-only
                     onDeleteAssignment={() => {}} // Empty function for view-only
-                    onLayerChange={() => {}} // Empty function for view-only
                     isViewOnly={true}
                   />
                 );

@@ -1,44 +1,53 @@
-# --- STAGE 1: Instalar dependencias ---
-FROM node:20-slim AS deps
-RUN apt-get update && apt-get install -y openssl
-WORKDIR /app
+# --- STAGE 1: Base ---
+FROM node:20-slim AS base
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Solo copiamos los archivos de configuración de paquetes
+# --- STAGE 2: Dependencies ---
+FROM base AS deps
+WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-
-# Instalamos las librerías. Esto genera la carpeta node_modules.
-RUN npm install
-# Generamos el cliente de Prisma para que sea compatible con este Linux
+# Install dependencies (including devDependencies for the build)
+RUN npm ci
+# Generate Prisma Client
 RUN npx prisma generate
 
-# --- STAGE 2: Construir la aplicación ---
-FROM node:20-slim AS builder
+# --- STAGE 3: Builder ---
+FROM base AS builder
 WORKDIR /app
-
-# Aquí es donde ocurre la "magia": en lugar de volver a descargar todo,
-# simplemente COPIAMOS los node_modules que ya descargamos en el paso anterior.
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Construimos Next.js (ahora sin el error de turbopack)
+# Disable telemetry during the build.
+ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
-# --- STAGE 3: Imagen final para correr ---
-FROM node:20-slim AS runner
+# --- STAGE 4: Runner ---
+FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Instalamos openssl que Prisma necesita para funcionar
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Copiamos solo lo estrictamente necesario para que la web funcione
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# server.js is created by next build from the standalone output
+CMD ["node", "server.js"]

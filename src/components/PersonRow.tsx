@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Person, Assignment } from '@/types';
 import { WeekInfo } from '@/utils/calendarUtils';
 import { useCalendarStore } from '@/stores/calendarStore';
-import { useCapacity } from '@/hooks/useCapacity';
 
 interface PersonRowProps {
   person: Person;
   assignments: Assignment[];
   weeksInfo: WeekInfo[];
   onPercentageChange?: (assignmentId: string, percentage: number) => void;
-  onDateRangeChange?: (assignmentId: string, startDate: Date, endDate: Date) => void;
   onDeleteAssignment?: (assignmentId: string) => void;
-  onLayerChange?: (assignmentId: string, layer: number) => void;
   onAddAssignment?: (assignment: Omit<Assignment, 'id'>) => Promise<void>;
   isViewOnly?: boolean;
 }
@@ -22,7 +19,7 @@ interface PersonRowProps {
  * PersonRow component displays a single person's row with weekly capacity colors
  * Follows Single Responsibility Principle: only handles person row display
  */
-export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeksInfo, onPercentageChange, onDateRangeChange, onDeleteAssignment, onLayerChange, onAddAssignment, isViewOnly = false }) => {
+export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeksInfo, onPercentageChange, onDeleteAssignment, onAddAssignment, isViewOnly = false }) => {
   const projects = useCalendarStore((state) => state.projects);
   const [showDropdowns, setShowDropdowns] = useState<{ [weekIndex: number]: boolean }>({});
   const [addingAssignment, setAddingAssignment] = useState<{ [weekIndex: number]: boolean }>({});
@@ -71,14 +68,6 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
     }
     
     return maxDailyCapacity;
-  };
-
-  // Calculate capacity color for a specific week
-  const getWeekCapacityColor = (capacity: number): string => {
-    if (capacity < 50) return 'red';
-    if (capacity < 75) return 'yellow';
-    if (capacity <= 100) return 'green';
-    return 'dark-red'; // Over 100%
   };
 
   // Get assignments for a specific week

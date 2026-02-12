@@ -35,7 +35,11 @@ export async function PUT(request: Request) {
     const { users } = await request.json();
     await prisma.person.deleteMany();
     const createdUsers = await prisma.person.createMany({
-      data: users.map((user: any) => ({
+      data: users.map((user: {
+        id: string;
+        name: string;
+        enabled?: boolean;
+      }) => ({
         id: user.id,
         name: user.name,
         enabled: user.enabled !== undefined ? user.enabled : true,

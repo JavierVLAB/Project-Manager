@@ -3,11 +3,11 @@ import { prisma } from '@/lib/prisma';
 
 // Kimai database connection configuration
 const kimaiConfig = {
-  host: '172.245.119.247',
-  port: 3308,
-  user: 'kimaiuser',
-  password: 'kimaipassword',
-  database: 'kimai',
+  host: process.env.KIMAI_DB_HOST || '172.245.119.247',
+  port: parseInt(process.env.KIMAI_DB_PORT || '3308'),
+  user: process.env.KIMAI_DB_USER || 'kimaiuser',
+  password: process.env.KIMAI_DB_PASSWORD || 'kimaipassword',
+  database: process.env.KIMAI_DB_NAME || 'kimai',
   connectTimeout: 10000,
 };
 
@@ -29,7 +29,7 @@ export async function getKimaiUsers() {
     FROM kimai2_users 
   `);
   
-  return (users as any[]).map((user: any) => ({
+  return (users as { id: number; username: string; name: string | null; email: string; enabled: number }[]).map((user) => ({
     id: user.id.toString(),
     name: user.name || user.username, // Use alias (full name) if available
     username: user.username,
@@ -47,7 +47,7 @@ export async function getKimaiProjects() {
     LEFT JOIN kimai2_customers c ON p.customer_id = c.id
   `);
   
-  return (projects as any[]).map((project: any) => ({
+  return (projects as { id: number; name: string; color: string | null; customer_name: string | null; visible: number }[]).map((project) => ({
     id: project.id.toString(),
     name: project.name,
     customer: project.customer_name,
@@ -151,7 +151,7 @@ export async function testKimaiConnection() {
   try {
     const pool = await getKimaiConnection();
     const [result] = await pool.execute('SELECT 1');
-    return (result as any[]).length > 0;
+    return (result as unknown[]).length > 0;
   } catch (error) {
     console.error('Kimai connection test failed:', error);
     return false;

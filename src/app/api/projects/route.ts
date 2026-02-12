@@ -43,7 +43,13 @@ export async function PUT(request: Request) {
     const { projects } = await request.json();
     await prisma.project.deleteMany();
     const createdProjects = await prisma.project.createMany({
-      data: projects.map((project: any) => ({
+      data: projects.map((project: {
+        id: string;
+        name: string;
+        color: string;
+        visible?: boolean;
+        customer?: string;
+      }) => ({
         id: project.id,
         name: project.name,
         color: project.color,

@@ -24,7 +24,6 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({ children, onDragStart, o
   const snapToDay: Modifier = ({ transform, active }) => {
     if (!active) return transform;
 
-    const totalDays = weeks * 7;
     const dayWidth = 100; // 100px per day (matches the w-24 class)
     const snappedX = Math.round(transform.x / dayWidth) * dayWidth;
 

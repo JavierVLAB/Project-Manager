@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCalendarStore } from '@/stores/calendarStore';
-import { getWeekInfo, getISOWeekNumber } from '@/utils/calendarUtils';
+import { getISOWeekNumber } from '@/utils/calendarUtils';
 
 interface WeekOption {
   value: string;
@@ -50,10 +50,9 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
     
     // Find week 1 by checking dates around Jan 1
     let week1Monday = new Date(currentYear, 0, 1); // Default to Jan 1
-    const jan1 = new Date(currentYear, 0, 1);
     
     // Try dates from Dec 28 of previous year to Jan 4 of current year to find week 1 Monday
-    let testDate = new Date(currentYear - 1, 11, 28); // Dec 28 of previous year
+    const testDate = new Date(currentYear - 1, 11, 28); // Dec 28 of previous year
     for (let i = 0; i < 14; i++) {
       const weekNumber = getISOWeekNumber(testDate);
       const dayOfWeek = testDate.getDay();

@@ -61,7 +61,15 @@ export async function PUT(request: Request) {
     const { assignments } = await request.json();
     await prisma.assignment.deleteMany();
     const createdAssignments = await prisma.assignment.createMany({
-      data: assignments.map((assignment: any) => ({
+      data: assignments.map((assignment: {
+        id: string;
+        personId: string;
+        projectId: string;
+        startDate: string;
+        endDate: string;
+        percentage: number;
+        layer?: number;
+      }) => ({
         id: assignment.id,
         personId: assignment.personId,
         projectId: assignment.projectId,
