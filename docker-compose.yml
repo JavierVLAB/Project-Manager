@@ -5,8 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: project-manager-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    network_mode: "host"
     env_file:
       - .env
     environment:
