@@ -319,10 +319,9 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                                   } else {
                                     // Update percentage normally if assignment is only for this week
                                     onPercentageChange?.(assignment.id, parseInt(e.target.value) || 0);
-                                  }
-                                }}
-                                className="w-20 px-2 py-1 text-sm border rounded bg-white text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
+                                }
+                              }}
+                            />
                             )}
                             <span className="text-sm text-gray-900 font-semibold">%</span>
                           </div>
