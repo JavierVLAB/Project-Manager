@@ -244,7 +244,7 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                           </div>
                           <div className="flex items-center space-x-2">
                             {isViewOnly ? (
-                              <div className="w-20 px-2 py-1 text-sm border rounded bg-gray-100 text-gray-800">
+                              <div className="w-20 px-2 py-1 text-sm border rounded bg-gray-100 text-gray-900 font-semibold">
                                 {assignment.percentage}
                               </div>
                             ) : (
@@ -253,6 +253,7 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                                 min="0"
                                 max="100"
                                 value={assignment.percentage}
+                                className="w-20 px-2 py-1 text-sm border rounded bg-white text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 onChange={(e) => {
                                   // If assignment spans multiple weeks, split it into individual week assignment
                                   const normalizedWeekStart = new Date(week.startDate);
@@ -320,10 +321,10 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
                                     onPercentageChange?.(assignment.id, parseInt(e.target.value) || 0);
                                   }
                                 }}
-                                className="w-20 px-2 py-1 text-sm border rounded"
+                                className="w-20 px-2 py-1 text-sm border rounded bg-white text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             )}
-                            <span className="text-sm text-gray-600">%</span>
+                            <span className="text-sm text-gray-900 font-semibold">%</span>
                           </div>
                         </div>
                       );
