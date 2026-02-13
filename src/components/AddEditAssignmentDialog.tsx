@@ -25,7 +25,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
   onClose,
 }) => {
   const { people, projects, addAssignment } = useCalendarStore();
-  const [personId, setPersonId] = useState('');
+  const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [projectId, setProjectId] = useState('');
   const [startWeek, setStartWeek] = useState('');
   const [endWeek, setEndWeek] = useState('');
@@ -101,7 +101,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
 
   useEffect(() => {
     if (!isOpen) return;
-    setPersonId('');
+    setSelectedPersonIds([]);
     setProjectId('');
     setStartWeek('');
     setEndWeek('');
@@ -111,7 +111,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
 
   const validate = () => {
     const newErrors: typeof errors = {};
-    if (!personId) newErrors.personId = 'Person is required';
+    if (selectedPersonIds.length === 0) newErrors.personId = 'At least one person is required';
     if (!projectId) newErrors.projectId = 'Project is required';
     if (!startWeek) newErrors.startWeek = 'Start week is required';
     if (!endWeek) newErrors.endWeek = 'End week is required';
@@ -130,12 +130,15 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
     const endWeekData = weekOptions.find(week => week.value === endWeek);
 
     if (startWeekData && endWeekData) {
-      addAssignment({
-        personId,
-        projectId,
-        startDate: startWeekData.startDate,
-        endDate: endWeekData.endDate,
-        percentage,
+      // Create assignment for each selected person
+      selectedPersonIds.forEach(personId => {
+        addAssignment({
+          personId,
+          projectId,
+          startDate: startWeekData.startDate,
+          endDate: endWeekData.endDate,
+          percentage,
+        });
       });
       onClose();
     }
@@ -150,20 +153,30 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Person
+              People (Select multiple)
             </label>
-            <select
-              value={personId}
-              onChange={(e) => setPersonId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value="">Select a person</option>
-               {people.filter(person => person.enabled !== false).map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
+            <div className="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto">
+              {people.filter(person => person.enabled !== false).map((person) => (
+                <label key={person.id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedPersonIds.includes(person.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedPersonIds([...selectedPersonIds, person.id]);
+                      } else {
+                        setSelectedPersonIds(selectedPersonIds.filter(id => id !== person.id));
+                      }
+                    }}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">{person.name}</span>
+                </label>
               ))}
-            </select>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Click on checkboxes to select or deselect people
+            </div>
             {errors.personId && <p className="text-red-500 text-sm mt-1">{errors.personId}</p>}
           </div>
           <div className="mb-4">
