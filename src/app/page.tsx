@@ -10,7 +10,7 @@ import { useCalendarStore } from '@/stores/calendarStore';
 import { getWeekInfo } from '@/utils/calendarUtils';
 
 export default function Home() {
-  const { people, projects, assignments, updateAssignment, addAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, deleteAssignment, updateProject, updateProjectColor, deletePerson, deleteProject, syncWithKimai, syncKimaiUsers, syncKimaiProjects } = useCalendarStore();
+  const { people, projects, assignments, updateAssignment, addAssignment, selectedWeek, goToPreviousWeek, goToNextWeek, goToToday, loadData, deleteAssignment, updateProject, updateProjectColor, deletePerson, deleteProject, syncWithKimai, syncKimaiUsers, syncKimaiProjects, savedFilters, saveFilter, deleteFilter } = useCalendarStore();
 
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
@@ -40,6 +40,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>(people);
+  const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
+  const [newFilterName, setNewFilterName] = useState('');
   
   // Search results - only show enabled users
   const searchResults = people.filter(person => 
@@ -298,6 +300,42 @@ export default function Home() {
                 )}
               </div>
 
+              {/* Saved Filters */}
+              {savedFilters.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-gray-900">Saved Filters</h4>
+                  </div>
+                  <div className="space-y-1">
+                    {savedFilters.map((filter) => (
+                      <div
+                        key={filter.id}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100"
+                      >
+                        <button
+                          onClick={() => {
+                            setSelectedPeople(filter.personIds);
+                            setFilteredPeople(people.filter(person => filter.personIds.includes(person.id)));
+                          }}
+                          className="text-sm text-gray-700 hover:text-blue-600 text-left flex-1"
+                        >
+                          {filter.name}
+                        </button>
+                        <button
+                          onClick={() => deleteFilter(filter.id)}
+                          className="text-gray-400 hover:text-red-500 ml-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Filter Actions */}
               <div className="mt-4 flex justify-between">
                 <button
                   onClick={() => setSelectedPeople([])}
@@ -321,6 +359,19 @@ export default function Home() {
                 </button>
               </div>
 
+              {/* Save Filter Button */}
+              {selectedPeople.length > 0 && (
+                <button
+                  onClick={() => {
+                    setNewFilterName('');
+                    setSaveFilterDialogOpen(true);
+                  }}
+                  className="mt-2 w-full px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+                >
+                  Save Filter
+                </button>
+              )}
+
             </div>
           </div>
         </div>
@@ -337,6 +388,49 @@ export default function Home() {
           isOpen={assignmentDialogOpen}
           onClose={() => setAssignmentDialogOpen(false)}
         />
+
+        {/* Save Filter Dialog */}
+        {saveFilterDialogOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Save Filter</h2>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter Name
+                </label>
+                <input
+                  type="text"
+                  value={newFilterName}
+                  onChange={(e) => setNewFilterName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Enter filter name (e.g., Design Team)"
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setSaveFilterDialogOpen(false)}
+                  className="px-4 py-2 text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newFilterName.trim()) {
+                      saveFilter(newFilterName.trim(), selectedPeople);
+                      setSaveFilterDialogOpen(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Admin Login Dialog */}
         {showLoginDialog && (
