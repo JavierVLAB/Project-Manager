@@ -92,12 +92,15 @@ interface CalendarState {
   projects: Project[];
   assignments: Assignment[];
   selectedWeek: Date;
+  savedFilters: { id: string; name: string; personIds: string[] }[];
 }
 
 interface CalendarActions {
   addPerson: (person: Omit<Person, 'id'>) => Promise<void>;
   updatePerson: (id: string, updates: Partial<Omit<Person, 'id'>>) => void;
   addProject: (project: Omit<Project, 'id'>) => Promise<void>;
+  saveFilter: (name: string, personIds: string[]) => void;
+  deleteFilter: (filterId: string) => void;
   updateProject: (id: string, updates: Partial<Omit<Project, 'id'>>) => void;
   updateProjectColor: (id: string, color: string) => void;
   addAssignment: (assignment: Omit<Assignment, 'id'>) => Promise<void>;
@@ -122,8 +125,9 @@ interface CalendarActions {
 export const useCalendarStore = create<CalendarState & CalendarActions>()(
   persist(
     (set, get) => ({
-  selectedWeek: snapToWeek(new Date()),
-  people: [],
+      selectedWeek: snapToWeek(new Date()),
+      people: [],
+      savedFilters: [],
   projects: [],
   assignments: [],
   addPerson: async (person) => {
@@ -398,6 +402,45 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     return { selectedWeek: nextWeek };
   }),
   goToToday: () => set({ selectedWeek: snapToWeek(new Date()) }),
+  saveFilter: async (name: string, personIds: string[]) => {
+    try {
+      const response = await fetch('/api/filters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, personIds }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save filter');
+      }
+      
+      const newFilter = await response.json();
+      set((state) => ({
+        savedFilters: [...state.savedFilters, newFilter],
+      }));
+    } catch (error) {
+      console.error('Error saving filter:', error);
+    }
+  },
+  deleteFilter: async (filterId: string) => {
+    try {
+      const response = await fetch('/api/filters', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: filterId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete filter');
+      }
+      
+      set((state) => ({
+        savedFilters: state.savedFilters.filter((f) => f.id !== filterId),
+      }));
+    } catch (error) {
+      console.error('Error deleting filter:', error);
+    }
+  },
     loadData: async () => {
       try {
         // Load projects
@@ -411,6 +454,10 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
         // Load assignments
         const assignmentsResponse = await fetch('/api/assignments');
         const assignmentsData = await assignmentsResponse.json();
+        
+        // Load filters
+        const filtersResponse = await fetch('/api/filters');
+        const filtersData = await filtersResponse.json();
         
         // Convert assignment dates from strings to Date objects
         const parsedAssignments = assignmentsData.assignments.map((assignment: {
@@ -426,7 +473,8 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
         set({ 
           people: (usersData.users as Person[] || []).sort((a: Person, b: Person) => a.name.localeCompare(b.name)), 
           projects: (projectsData.projects as Project[] || []).sort((a: Project, b: Project) => a.name.localeCompare(b.name)), 
-          assignments: parsedAssignments 
+          assignments: parsedAssignments,
+          savedFilters: filtersData.filters || []
         });
       } catch (error) {
         console.error('Error loading data from database:', error);

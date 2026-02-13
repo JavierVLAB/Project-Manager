@@ -41,3 +41,13 @@ model Assignment {
 
   @@map("assignments")
 }
+
+model Filter {
+  id         String   @id @default(cuid())
+  name       String
+  personIds  Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("filters")
+}
