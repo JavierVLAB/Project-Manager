@@ -101,9 +101,30 @@ export const PersonRow: React.FC<PersonRowProps> = ({ person, assignments, weeks
         const weekAssignments = getWeekAssignments(week.startDate, week.endDate);
         
         return (
-          <div key={weekIndex} className="flex-1 relative bg-gray-50 border rounded-lg p-1" style={{ 
+          <div key={weekIndex} className="flex-1 relative bg-gray-50 border rounded-lg p-1 group" style={{ 
             height: '64px'
           }}>
+            {/* Hover tooltip */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-500 bg-opacity-90 text-white font-medium px-4 py-2 rounded-lg shadow-lg z-50 min-w-[150px] text-center pointer-events-none">
+              {weekAssignments.length > 0 ? (
+                <div className="space-y-1">
+                  {weekAssignments.map((assignment) => {
+                    const project = projects.find(p => p.id === assignment.projectId);
+                    return (
+                      <div key={assignment.id} className="flex justify-between items-center text-sm">
+                        <span className="flex-1 text-left">{project?.customer || project?.name || 'Unknown Project'}</span>
+                        <span className="ml-2 font-semibold">{assignment.percentage}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-sm">No assignments</div>
+              )}
+              {/* Arrow pointing up */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-500"></div>
+            </div>
+            
             {/* Week cell with color coding */}
             <div
               className={`w-full h-full rounded-lg cursor-pointer flex items-center justify-center transition-colors duration-200 ${
