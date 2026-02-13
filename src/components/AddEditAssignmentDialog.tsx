@@ -2,6 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCalendarStore } from '@/stores/calendarStore';
+import { getISOWeekNumber } from '@/utils/calendarUtils';
+
+interface WeekOption {
+  value: string;
+  label: string;
+  startDate: Date;
+  endDate: Date;
+}
 
 interface AddEditAssignmentDialogProps {
   isOpen: boolean;
@@ -19,23 +27,84 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
   const { people, projects, addAssignment } = useCalendarStore();
   const [personId, setPersonId] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startWeek, setStartWeek] = useState('');
+  const [endWeek, setEndWeek] = useState('');
   const [percentage, setPercentage] = useState(50);
   const [errors, setErrors] = useState<{
     personId?: string;
     projectId?: string;
-    startDate?: string;
-    endDate?: string;
+    startWeek?: string;
+    endWeek?: string;
     percentage?: string;
   }>({});
+  const [weekOptions, setWeekOptions] = useState<WeekOption[]>([]);
+
+  // Generate week options for the next 52 weeks
+  useEffect(() => {
+    const options: WeekOption[] = [];
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    // Generate weeks using the same week numbering as the weekly grid
+    // First, find week 1 Monday using the same logic as the weekly grid
+    
+    // Find week 1 by checking dates around Jan 1
+    let week1Monday = new Date(currentYear, 0, 1); // Default to Jan 1
+    
+    // Try dates from Dec 28 of previous year to Jan 4 of current year to find week 1 Monday
+    const testDate = new Date(currentYear - 1, 11, 28); // Dec 28 of previous year
+    for (let i = 0; i < 14; i++) {
+      const weekNumber = getISOWeekNumber(testDate);
+      const dayOfWeek = testDate.getDay();
+      
+      if (weekNumber === 1 && dayOfWeek === 1) { // Week 1 and Monday
+        week1Monday = new Date(testDate);
+        week1Monday.setHours(0, 0, 0, 0);
+        break;
+      }
+      
+      testDate.setDate(testDate.getDate() + 1);
+    }
+
+    console.log('Week 1 Monday found:', week1Monday.toISOString().split('T')[0]);
+
+    for (let weekNumber = 1; weekNumber <= 52; weekNumber++) {
+      // Calculate start and end dates for each week (starting on Monday)
+      const startDate = new Date(week1Monday);
+      startDate.setDate(week1Monday.getDate() + (weekNumber - 1) * 7);
+      startDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
+
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6);
+      endDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
+      
+      // Verify the week number matches what the weekly grid uses
+      const actualWeekNumber = getISOWeekNumber(startDate);
+      console.log(`Week ${weekNumber} calculated as ${startDate.toISOString().split('T')[0]} - ${endDate.toISOString().split('T')[0]}, actual week number: ${actualWeekNumber}`);
+
+      // Format date string for display
+      const formatDate = (date: Date) => {
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      };
+
+      options.push({
+        value: weekNumber.toString(),
+        label: `Week ${weekNumber} (${formatDate(startDate)} - ${formatDate(endDate)})`,
+        startDate,
+        endDate,
+      });
+    }
+
+    console.log('Generated week options:', options.slice(0, 12));
+    setWeekOptions(options);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
     setPersonId('');
     setProjectId('');
-    setStartDate('');
-    setEndDate('');
+    setStartWeek('');
+    setEndWeek('');
     setPercentage(50);
     setErrors({});
   }, [isOpen]);
@@ -44,9 +113,9 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
     const newErrors: typeof errors = {};
     if (!personId) newErrors.personId = 'Person is required';
     if (!projectId) newErrors.projectId = 'Project is required';
-    if (!startDate) newErrors.startDate = 'Start date is required';
-    if (!endDate) newErrors.endDate = 'End date is required';
-    if (new Date(startDate) > new Date(endDate)) newErrors.endDate = 'End date must be after start date';
+    if (!startWeek) newErrors.startWeek = 'Start week is required';
+    if (!endWeek) newErrors.endWeek = 'End week is required';
+    if (parseInt(startWeek) > parseInt(endWeek)) newErrors.endWeek = 'End week must be after start week';
     if (percentage < 0 || percentage > 100) newErrors.percentage = 'Percentage must be between 0 and 100';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -56,14 +125,20 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
     e.preventDefault();
     if (!validate()) return;
 
-    addAssignment({
-      personId,
-      projectId,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      percentage,
-    });
-    onClose();
+    // Find the selected start and end week dates
+    const startWeekData = weekOptions.find(week => week.value === startWeek);
+    const endWeekData = weekOptions.find(week => week.value === endWeek);
+
+    if (startWeekData && endWeekData) {
+      addAssignment({
+        personId,
+        projectId,
+        startDate: startWeekData.startDate,
+        endDate: endWeekData.endDate,
+        percentage,
+      });
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
@@ -83,9 +158,9 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Select a person</option>
-              {people.map((person) => (
+               {people.filter(person => person.enabled !== false).map((person) => (
                 <option key={person.id} value={person.id}>
-                  {person.name} - {person.role}
+                  {person.name}
                 </option>
               ))}
             </select>
@@ -101,7 +176,7 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Select a project</option>
-              {projects.map((project) => (
+              {projects.filter(project => project.visible).map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>
@@ -111,27 +186,39 @@ export const AddEditAssignmentDialog: React.FC<AddEditAssignmentDialogProps> = (
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Start Date
+              Start Week
             </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+            <select
+              value={startWeek}
+              onChange={(e) => setStartWeek(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            />
-            {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>}
+            >
+              <option value="">Select a week</option>
+              {weekOptions.map((week) => (
+                <option key={week.value} value={week.value}>
+                  {week.label}
+                </option>
+              ))}
+            </select>
+            {errors.startWeek && <p className="text-red-500 text-sm mt-1">{errors.startWeek}</p>}
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              End Date
+              End Week
             </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+            <select
+              value={endWeek}
+              onChange={(e) => setEndWeek(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            />
-            {errors.endDate && <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>}
+            >
+              <option value="">Select a week</option>
+              {weekOptions.map((week) => (
+                <option key={week.value} value={week.value}>
+                  {week.label}
+                </option>
+              ))}
+            </select>
+            {errors.endWeek && <p className="text-red-500 text-sm mt-1">{errors.endWeek}</p>}
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">

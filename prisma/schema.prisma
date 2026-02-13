@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id    String @id @default(cuid())
+  name  String
+  enabled Boolean @default(true)
+  assignments Assignment[]
+
+  @@map("people")
+}
+
+model Project {
+  id    String @id @default(cuid())
+  name  String
+  color String @default("#000000")
+  visible Boolean @default(true)
+  customer String?
+  assignments Assignment[]
+
+  @@map("projects")
+}
+
+model Assignment {
+  id          String @id @default(cuid())
+  personId    String
+  projectId   String
+  startDate   DateTime
+  endDate     DateTime
+  percentage  Int
+  layer       Int?
+
+  person      Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("assignments")
+}

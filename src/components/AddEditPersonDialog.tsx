@@ -19,26 +19,22 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
   onClose,
   person,
 }) => {
-  const { addPerson, updatePerson } = useCalendarStore();
+  const { updatePerson } = useCalendarStore();
   const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; role?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string }>({});
 
   useEffect(() => {
     if (person) {
       setName(person.name);
-      setRole(person.role);
     } else {
       setName('');
-      setRole('');
     }
     setErrors({});
   }, [person, isOpen]);
 
   const validate = () => {
-    const newErrors: { name?: string; role?: string } = {};
+    const newErrors: { name?: string } = {};
     if (!name.trim()) newErrors.name = 'Name is required';
-    if (!role.trim()) newErrors.role = 'Role is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -48,20 +44,23 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
     if (!validate()) return;
 
     if (person) {
-      updatePerson(person.id, { name: name.trim(), role: role.trim() });
-    } else {
-      addPerson({ name: name.trim(), role: role.trim() });
+      updatePerson(person.id, { name: name.trim() });
     }
     onClose();
   };
 
   if (!isOpen) return null;
 
+  // Since we don't allow adding people directly, we can hide this dialog if no person is provided
+  if (!person) {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4 text-gray-900">
-          {person ? 'Edit Person' : 'Add Person'}
+          Edit Person
         </h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -76,18 +75,7 @@ export const AddEditPersonDialog: React.FC<AddEditPersonDialogProps> = ({
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role
-            </label>
-            <input
-              type="text"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            />
-            {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}
-          </div>
+
           <div className="flex justify-end space-x-2">
             <button
               type="button"

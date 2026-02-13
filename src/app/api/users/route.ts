@@ -1,45 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const { name } = await request.json();
-
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json({ error: 'Invalid person name' }, { status: 400 });
-    }
-
-    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'users.csv');
-    const newRow = `${name};;0;${';'.repeat(30)}\n`;
-
-    await fs.appendFile(csvPath, newRow);
-
-    return NextResponse.json({ success: true });
+    const users = await prisma.person.findMany();
+    return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error adding person to CSV:', error);
-    return NextResponse.json({ error: 'Failed to add person' }, { status: 500 });
+    console.error('Error fetching users:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch users' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function POST(request: Request) {
+  try {
+    const { name } = await request.json();
+    const newUser = await prisma.person.create({
+      data: { name },
+    });
+    return NextResponse.json(newUser);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return NextResponse.json(
+      { error: 'Failed to create user' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
   try {
     const { users } = await request.json();
-
-    if (!Array.isArray(users)) {
-      return NextResponse.json({ error: 'Invalid users data' }, { status: 400 });
-    }
-
-    const csvPath = path.join(process.cwd(), 'public', 'local_permanent', 'users.csv');
-    const csvContent = users.map(user =>
-      `${user.name};${user.id};0;${';'.repeat(30)}`
-    ).join('\n') + '\n';
-
-    await fs.writeFile(csvPath, csvContent);
-
-    return NextResponse.json({ success: true });
+    await prisma.person.deleteMany();
+    const createdUsers = await prisma.person.createMany({
+      data: users.map((user: {
+        id: string;
+        name: string;
+        enabled?: boolean;
+      }) => ({
+        id: user.id,
+        name: user.name,
+        enabled: user.enabled !== undefined ? user.enabled : true,
+      })),
+    });
+    return NextResponse.json({ success: true, count: createdUsers.count });
   } catch (error) {
-    console.error('Error saving users to CSV:', error);
-    return NextResponse.json({ error: 'Failed to save users' }, { status: 500 });
+    console.error('Error updating users:', error);
+    return NextResponse.json(
+      { error: 'Failed to update users' },
+      { status: 500 }
+    );
   }
 }

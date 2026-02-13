@@ -1,12 +1,13 @@
-version: '3.8'
-
 services:
-  web:
-    build: .
-    container_name: nextjs-app
-    ports:
-      - "53210:53210"
-    restart: always
-    volumes:
-      # Carpeta persistente en el servidor (no se borra al reconstruir)
-      - ./public/local_permanent:/app/public/local_permanent
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: project-manager-app
+    restart: unless-stopped
+    network_mode: "host"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1

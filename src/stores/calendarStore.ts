@@ -2,7 +2,82 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Person, Project, Assignment } from '@/types';
 import { snapToWeek } from '@/utils/calendarUtils';
-import Papa from 'papaparse';
+
+// Helper function to check if two assignments overlap in time
+function assignmentsOverlap(assignment1: Omit<Assignment, 'id'>, assignment2: Omit<Assignment, 'id'>): boolean {
+  // Convert dates to Date objects if they are strings
+  const getDate = (date: Date | string): Date => {
+    return typeof date === 'string' ? new Date(date) : date;
+  };
+
+  const start1 = getDate(assignment1.startDate).getTime();
+  const end1 = getDate(assignment1.endDate).getTime();
+  const start2 = getDate(assignment2.startDate).getTime();
+  const end2 = getDate(assignment2.endDate).getTime();
+
+  return start1 <= end2 && start2 <= end1;
+}
+
+// Helper function to split an assignment into weekly segments
+function splitAssignmentIntoWeeks(assignment: Omit<Assignment, 'id'>): Omit<Assignment, 'id'>[] {
+  const { startDate, endDate, ...rest } = assignment;
+  const weeklyAssignments: Omit<Assignment, 'id'>[] = [];
+
+  // Convert dates to Date objects if they are strings
+  const getDate = (date: Date | string): Date => {
+    return typeof date === 'string' ? new Date(date) : date;
+  };
+
+  // The dates from the dialog are already in ISO week format (Monday to Sunday),
+  // so we can directly use them without any modification
+  const dialogStart = new Date(getDate(startDate).getTime());
+  dialogStart.setHours(0, 0, 0, 0);
+  const dialogEnd = new Date(getDate(endDate).getTime());
+  dialogEnd.setHours(0, 0, 0, 0);
+
+  // Check if assignment is already a single week
+  const durationInDays = Math.ceil((dialogEnd.getTime() - dialogStart.getTime()) / (1000 * 60 * 60 * 24));
+  if (durationInDays <= 7) {
+    weeklyAssignments.push({
+      ...rest,
+      startDate: dialogStart,
+      endDate: dialogEnd,
+    });
+    return weeklyAssignments;
+  }
+
+  // Split into weekly assignments
+  let currentStart = new Date(dialogStart);
+  const maxIterations = 53; // Maximum number of weeks in a year to prevent infinite loop
+  let iterationCount = 0;
+  
+  while (currentStart <= dialogEnd && iterationCount < maxIterations) {
+    const currentEnd = new Date(currentStart);
+    currentEnd.setDate(currentStart.getDate() + 6);
+    currentEnd.setHours(0, 0, 0, 0);
+
+    // If the week ends after the assignment's end date, use the assignment's end date
+    if (currentEnd > dialogEnd) {
+      currentEnd.setTime(dialogEnd.getTime());
+    }
+
+    // Add the weekly assignment
+    weeklyAssignments.push({
+      ...rest,
+      startDate: new Date(currentStart),
+      endDate: new Date(currentEnd),
+    });
+
+    // Move to the next week (Monday)
+    currentStart = new Date(currentEnd);
+    currentStart.setDate(currentEnd.getDate() + 1);
+    currentStart.setHours(0, 0, 0, 0);
+    
+    iterationCount++;
+  }
+
+  return weeklyAssignments;
+}
 
 // Custom reviver to convert date strings back to Date objects
 const dateReviver = (key: string, value: unknown) => {
@@ -38,6 +113,10 @@ interface CalendarActions {
   goToToday: () => void;
   loadData: () => Promise<void>;
   saveAllData: () => Promise<void>;
+  syncWithKimai: () => Promise<void>;
+  syncKimaiUsers: () => Promise<void>;
+  syncKimaiProjects: () => Promise<void>;
+  testKimaiConnection: () => Promise<boolean>;
 }
 
 export const useCalendarStore = create<CalendarState & CalendarActions>()(
@@ -72,10 +151,17 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     }
   },
   updatePerson: (id, updates) => set((state) => ({
-    people: state.people.map(p => p.id === id ? { ...p, ...updates } : p),
+    people: state.people.map(p => p.id === id ? { 
+      ...p, 
+      ...updates 
+    } : p),
   })),
   addProject: async (project) => {
-    const newProject = { ...project, id: Date.now().toString() };
+    const newProject = { 
+      ...project, 
+      id: Date.now().toString(),
+      visible: project.visible !== undefined ? project.visible : true
+    };
     set((state) => ({
       projects: [...state.projects, newProject],
     }));
@@ -84,7 +170,10 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       const response = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: project.name }),
+        body: JSON.stringify({ 
+          name: project.name,
+          visible: project.visible 
+        }),
       });
 
       if (!response.ok) {
@@ -104,44 +193,109 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
   updateProjectColor: (id, color) => set((state) => ({
     projects: state.projects.map(p => p.id === id ? { ...p, color } : p),
   })),
-  addAssignment: async (assignment) => {
+  addAssignment: async (assignment: Omit<Assignment, 'id'>) => {
     console.log('addAssignment called with:', assignment);
-    if (!get().validateCapacity(assignment.personId, assignment.percentage)) {
+
+    // Split assignment into weekly segments
+    const weeklyAssignments = splitAssignmentIntoWeeks(assignment);
+    console.log('Split into weekly assignments:', weeklyAssignments);
+
+    // Check for existing assignments with the same projectId in the same week
+    const state = get();
+    
+    // Normalize weekly assignments to UTC for comparison with database assignments
+    const normalizedWeeklyAssignments = weeklyAssignments.map(weekly => ({
+      ...weekly,
+      startDate: new Date(Date.UTC(
+        weekly.startDate.getFullYear(),
+        weekly.startDate.getMonth(),
+        weekly.startDate.getDate(),
+        0, 0, 0, 0
+      )),
+      endDate: new Date(Date.UTC(
+        weekly.endDate.getFullYear(),
+        weekly.endDate.getMonth(),
+        weekly.endDate.getDate(),
+        0, 0, 0, 0
+      ))
+    }));
+    
+    const existingAssignments = normalizedWeeklyAssignments.filter(weeklyAssignment => {
+      const existing = state.assignments.find(a => 
+        a.personId === weeklyAssignment.personId && 
+        a.projectId === weeklyAssignment.projectId && 
+        assignmentsOverlap(weeklyAssignment, a)
+      );
+      return existing;
+    });
+
+    if (existingAssignments.length > 0) {
+      console.warn('Cannot add the same project twice in the same week');
+      return;
+    }
+
+    // Check capacity for each week before adding
+    const isValid = weeklyAssignments.every(weeklyAssignment => {
+      return get().validateCapacity(weeklyAssignment.personId, weeklyAssignment.percentage);
+    });
+
+    if (!isValid) {
       console.warn('Capacity limit exceeded, assignment not added');
       return;
     }
-    const newAssignment = { ...assignment, id: Date.now().toString() };
-    console.log('New assignment to add:', newAssignment);
-    set((state) => ({
-      assignments: [...state.assignments, newAssignment],
-    }));
 
+    // Save all weekly assignments to database first to get real IDs
+    const savedAssignments: Assignment[] = [];
     try {
-      const response = await fetch('/api/assignments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          personId: assignment.personId,
-          projectId: assignment.projectId,
-          startDate: assignment.startDate.toISOString(),
-          endDate: assignment.endDate.toISOString(),
-          percentage: assignment.percentage,
-        }),
-      });
-      console.log('API response:', response.status);
-
-      if (!response.ok) {
-        throw new Error('Failed to add assignment to CSV');
+      for (const weeklyAssignment of weeklyAssignments) {
+        // Normalize dates to UTC start of day (00:00:00)
+        const startDate = new Date(Date.UTC(
+          weeklyAssignment.startDate.getFullYear(),
+          weeklyAssignment.startDate.getMonth(),
+          weeklyAssignment.startDate.getDate(),
+          0, 0, 0, 0
+        ));
+        
+        const endDate = new Date(Date.UTC(
+          weeklyAssignment.endDate.getFullYear(),
+          weeklyAssignment.endDate.getMonth(),
+          weeklyAssignment.endDate.getDate(),
+          0, 0, 0, 0
+        ));
+        
+        const response = await fetch('/api/assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            personId: weeklyAssignment.personId,
+            projectId: weeklyAssignment.projectId,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            percentage: weeklyAssignment.percentage,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to add assignment to database');
+        }
+        
+        const savedAssignment = await response.json();
+        savedAssignments.push(savedAssignment);
+        console.log('Saved assignment with ID:', savedAssignment.id);
       }
-    } catch (error) {
-      console.error('Error adding assignment to CSV:', error);
-      // Revert the addition
+      
+      // Add to store only after all have been saved successfully
       set((state) => ({
-        assignments: state.assignments.filter(a => a.id !== newAssignment.id),
+        assignments: [...state.assignments, ...savedAssignments],
       }));
+      
+    } catch (error) {
+      console.error('Error adding assignment to database:', error);
+      // Revert - but since we didn't add to store yet, just return
+      return;
     }
   },
-  updateAssignment: async (id, updates) => {
+  updateAssignment: async (id: string, updates: Partial<Omit<Assignment, 'id'>>) => {
     const state = get();
     const updatedAssignments = state.assignments.map(a => a.id === id ? { ...a, ...updates } : a);
     const updatedAssignment = updatedAssignments.find(a => a.id === id);
@@ -166,6 +320,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
             startDate: a.startDate instanceof Date && !isNaN(a.startDate.getTime()) ? a.startDate.toISOString() : a.startDate,
             endDate: a.endDate instanceof Date && !isNaN(a.endDate.getTime()) ? a.endDate.toISOString() : a.endDate,
             percentage: a.percentage,
+            layer: a.layer, // Include layer information when saving
           }))
         }),
       });
@@ -177,7 +332,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       console.error('Error saving assignments after update:', error);
     }
   },
-  getPersonCapacity: (personId) => {
+  getPersonCapacity: (personId: string) => {
     const state = get();
     const weekStart = state.selectedWeek;
     const weekEnd = new Date(weekStart);
@@ -202,13 +357,36 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
         return overlaps;
       });
 
-    return relevantAssignments.reduce((sum: number, assignment: Assignment) => sum + assignment.percentage, 0);
+    // Calculate maximum capacity on any single day of the week
+    let maxDailyCapacity = 0;
+    const currentDate = new Date(normalizedWeekStart);
+    
+    while (currentDate <= normalizedWeekEnd) {
+      const dayCapacity = relevantAssignments.reduce((sum: number, assignment: Assignment) => {
+        const normalizedStart = normalizeToStartOfDay(assignment.startDate);
+        const normalizedEnd = normalizeToStartOfDay(assignment.endDate);
+        
+        if (currentDate >= normalizedStart && currentDate <= normalizedEnd) {
+          return sum + assignment.percentage;
+        }
+        
+        return sum;
+      }, 0);
+      
+      if (dayCapacity > maxDailyCapacity) {
+        maxDailyCapacity = dayCapacity;
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return maxDailyCapacity;
   },
-  validateCapacity: (personId, additionalPercentage = 0) => {
+  validateCapacity: (personId: string, additionalPercentage: number = 0) => {
     const currentCapacity = get().getPersonCapacity(personId);
     return currentCapacity + additionalPercentage <= 150;
   },
-  setSelectedWeek: (week) => set({ selectedWeek: snapToWeek(week) }),
+  setSelectedWeek: (week: Date) => set({ selectedWeek: snapToWeek(week) }),
   goToPreviousWeek: () => set((state) => {
     const prevWeek = new Date(state.selectedWeek);
     prevWeek.setDate(prevWeek.getDate() - 7);
@@ -220,62 +398,41 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     return { selectedWeek: nextWeek };
   }),
   goToToday: () => set({ selectedWeek: snapToWeek(new Date()) }),
-  loadData: async () => {
-    try {
-      // Load projects
-      const projectsResponse = await fetch('/local_permanent/projects.csv');
-      const projectsText = await projectsResponse.text();
-      const projectsParsed = Papa.parse(projectsText, { header: false, skipEmptyLines: true });
-      const projects: Project[] = projectsParsed.data.map((row, index: number) => {
-        const r = row as unknown[];
-        return {
-          id: (index + 1).toString(),
-          name: (r[1] as string) || '',
-          color: (r[2] as string) || '#000000',
-        };
-      });
-
-      // Load users
-      const usersResponse = await fetch('/local_permanent/users.csv');
-      const usersText = await usersResponse.text();
-      const usersParsed = Papa.parse(usersText, { header: false, skipEmptyLines: true });
-      const users: Person[] = usersParsed.data.filter((row) => {
-        const r = row as unknown[];
-        return (r[0] as string) && (r[0] as string) !== 'Total de horas trabajadas';
-      }).map((row, index: number) => {
-        const r = row as unknown[];
-        return {
-          id: (r[1] as string) || (index + 1).toString(),
-          name: r[0] as string,
-          role: 'Employee',
-        };
-      });
-
-      // Load assignments
-      const assignmentsResponse = await fetch('/local_permanent/assignments.csv');
-      const assignmentsText = await assignmentsResponse.text();
-      console.log('Assignments CSV text:', assignmentsText);
-      const assignmentsParsed = Papa.parse(assignmentsText, { header: false, skipEmptyLines: true });
-      console.log('Assignments parsed data:', assignmentsParsed.data);
-      const assignments: Assignment[] = assignmentsParsed.data.map((row, index: number) => {
-        const r = row as unknown[];
-        return {
-          id: (index + 1).toString(),
-          personId: r[0] as string,
-          projectId: r[1] as string,
-          startDate: new Date(r[2] as string),
-          endDate: new Date(r[3] as string),
-          percentage: parseInt(r[4] as string, 10),
-        };
-      });
-      console.log('Loaded assignments:', assignments);
-
-      set({ people: users, projects: projects, assignments: assignments });
-    } catch (error) {
-      console.error('Error loading data from CSV:', error);
-    }
-  },
-  deleteAssignment: (id) => {
+    loadData: async () => {
+      try {
+        // Load projects
+        const projectsResponse = await fetch('/api/projects');
+        const projectsData = await projectsResponse.json();
+        
+        // Load users
+        const usersResponse = await fetch('/api/users');
+        const usersData = await usersResponse.json();
+        
+        // Load assignments
+        const assignmentsResponse = await fetch('/api/assignments');
+        const assignmentsData = await assignmentsResponse.json();
+        
+        // Convert assignment dates from strings to Date objects
+        const parsedAssignments = assignmentsData.assignments.map((assignment: {
+          startDate: string;
+          endDate: string;
+          [key: string]: unknown;
+        }) => ({
+          ...assignment,
+          startDate: new Date(assignment.startDate),
+          endDate: new Date(assignment.endDate)
+        }));
+        
+        set({ 
+          people: (usersData.users as Person[] || []).sort((a: Person, b: Person) => a.name.localeCompare(b.name)), 
+          projects: (projectsData.projects as Project[] || []).sort((a: Project, b: Project) => a.name.localeCompare(b.name)), 
+          assignments: parsedAssignments 
+        });
+      } catch (error) {
+        console.error('Error loading data from database:', error);
+      }
+    },
+   deleteAssignment: async (id) => {
     console.log('deleteAssignment called with id:', id);
     const state = get();
     const assignmentToDelete = state.assignments.find(a => a.id === id);
@@ -288,6 +445,27 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     set((state) => ({
       assignments: state.assignments.filter(a => a.id !== id),
     }));
+
+    try {
+      const response = await fetch('/api/assignments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      console.log('Delete API response status:', response.status);
+      console.log('Delete API response:', await response.text());
+
+      if (!response.ok) {
+        throw new Error('Failed to delete assignment from CSV');
+      }
+    } catch (error) {
+      console.error('Error deleting assignment from CSV:', error);
+      // Revert the deletion
+      set((state) => ({
+        assignments: [...state.assignments, assignmentToDelete],
+      }));
+    }
   },
   deletePerson: (id) => {
     console.log('deletePerson called with id:', id);
@@ -325,7 +503,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       assignments: updatedAssignments,
     }));
   },
-  saveAllData: async () => {
+   saveAllData: async () => {
     const state = get();
     try {
       // Save users
@@ -378,6 +556,85 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       console.log('All data saved successfully');
     } catch (error) {
       console.error('Error saving all data:', error);
+    }
+  },
+  syncWithKimai: async () => {
+    console.log('Starting synchronization with Kimai database...');
+    try {
+      const response = await fetch('/api/kimai/sync', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to synchronize with Kimai');
+      }
+
+      const data = await response.json();
+      console.log('Kimai synchronization completed:', data);
+
+      // Update store with synchronized data
+      set({
+        people: (data.users.data as Person[]).sort((a, b) => a.name.localeCompare(b.name)),
+        projects: (data.projects.data as Project[]).sort((a, b) => a.name.localeCompare(b.name)),
+      });
+
+    } catch (error) {
+      console.error('Error synchronizing with Kimai:', error);
+    }
+  },
+  syncKimaiUsers: async () => {
+    console.log('Starting Kimai users synchronization...');
+    try {
+      const response = await fetch('/api/kimai/users', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to synchronize Kimai users');
+      }
+
+      const data = await response.json();
+      console.log('Kimai users synchronization completed:', data);
+
+      // Update store with synchronized users
+      set({
+        people: (data.users as Person[]).sort((a, b) => a.name.localeCompare(b.name)),
+      });
+
+    } catch (error) {
+      console.error('Error synchronizing Kimai users:', error);
+    }
+  },
+  syncKimaiProjects: async () => {
+    console.log('Starting Kimai projects synchronization...');
+    try {
+      const response = await fetch('/api/kimai/projects', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to synchronize Kimai projects');
+      }
+
+      const data = await response.json();
+      console.log('Kimai projects synchronization completed:', data);
+
+      // Update store with synchronized projects
+      set({
+        projects: (data.projects as Project[]).sort((a, b) => a.name.localeCompare(b.name)),
+      });
+
+    } catch (error) {
+      console.error('Error synchronizing Kimai projects:', error);
+    }
+  },
+  testKimaiConnection: async () => {
+    try {
+      const response = await fetch('/api/kimai/sync');
+      return response.ok;
+    } catch (error) {
+      console.error('Error testing Kimai connection:', error);
+      return false;
     }
   },
     }),
