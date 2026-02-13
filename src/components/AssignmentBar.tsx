@@ -154,7 +154,7 @@ export const AssignmentBar: React.FC<AssignmentBarProps> = ({
        {...attributes}
        {...listeners}
      >
-       {assignment.percentage}%
+        <span className="text-gray-900 font-bold text-sm">{assignment.percentage}%</span>
 
        {/* Delete button - appears on hover */}
         {isHovered && (
