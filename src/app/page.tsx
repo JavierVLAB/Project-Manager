@@ -138,7 +138,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Weekly Resource Calendar - MVP Iteration 3
+          Project Manager
         </h1>
 
         <div className="mb-6 flex items-center justify-between">
