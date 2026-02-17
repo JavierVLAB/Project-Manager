@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const ADMIN_PASSWORD = 'admin123'; // Replace with a stronger password
-
 export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -13,7 +11,10 @@ export default function AdminPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password === ADMIN_PASSWORD) {
+    // Use environment variable or a secure default for development
+    const securePassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123';
+    
+    if (password === securePassword) {
       // Set admin session
       localStorage.setItem('admin', 'true');
       router.push('/admin/dashboard');

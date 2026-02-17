@@ -38,9 +38,14 @@ RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Security: Make the app directory read-only for the user
+# and only allow writing to necessary directories
+RUN chmod -R 555 /app && \
+    chmod -R 777 /app/.next && \
+    chown -R nextjs:nodejs /app
 
 USER nextjs
 

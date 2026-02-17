@@ -64,8 +64,8 @@ export default function Home() {
   // Handle admin login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const ADMIN_USERNAME = 'Propelland';
-    const ADMIN_PASSWORD = 'Facecloth-Catnap-Produce4';
+    const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME || 'Propelland';
+    const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'Facecloth-Catnap-Produce4';
     
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       setIsAdmin(true);
