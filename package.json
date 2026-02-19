@@ -13,10 +13,10 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@prisma/client": "^5.22.0",
     "mysql2": "^3.16.2",
-    "next": "15.1.6",
+    "next": "15.1.11",
     "papaparse": "^5.5.3",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
+    "react": "19.0.3",
+    "react-dom": "19.0.3",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
