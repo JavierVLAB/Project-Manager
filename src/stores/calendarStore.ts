@@ -473,7 +473,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
         const filtersData = await filtersResponse.json();
         
         // Convert assignment dates from strings to Date objects
-        const parsedAssignments = assignmentsData.assignments.map((assignment: {
+        const parsedAssignments = (assignmentsData.assignments || []).map((assignment: {
           startDate: string;
           endDate: string;
           [key: string]: unknown;
