@@ -11,10 +11,14 @@ services:
     restart: unless-stopped
     network_mode: "host"
     read_only: true
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     tmpfs:
-      - /tmp:size=128M
-      - /var/tmp:size=128M
-      - /app/.next/cache:size=512M
+      - /tmp:size=64M
+      - /var/tmp:size=64M
+      - /app/.next/cache:size=256M
     dns:
       - 8.8.8.8
     # cap_drop:

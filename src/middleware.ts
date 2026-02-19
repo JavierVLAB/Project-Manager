@@ -2,8 +2,18 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  
+  // --- SEGURIDAD RACKNERD: Captura de IP del atacante ---
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'desconocida';
+  
+  // Si vemos intentos raros, esto nos dirá quién es
+  if (path.includes('lrt') || path.includes('NaN')) {
+    console.error(`🚨 [ALERTA DE SEGURIDAD] Intento detectado desde IP: ${ip} | Path: ${path}`);
+  }
+
   // Only protect API routes
-  if (request.nextUrl.pathname.startsWith('/api')) {
+  if (path.startsWith('/api')) {
     // Skip some public API routes if needed
     // For now, let's protect everything in /api
     
