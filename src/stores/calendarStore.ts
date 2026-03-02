@@ -114,7 +114,7 @@ interface CalendarActions {
   deletePerson: (id: string) => void;
   deleteProject: (id: string) => void;
   getPersonCapacity: (personId: string) => number;
-  validateCapacity: (personId: string, additionalPercentage?: number) => boolean;
+  validateCapacity: (personId: string, additionalPercentage?: number, startDate?: Date, endDate?: Date) => boolean;
   setSelectedWeek: (week: Date) => void;
   goToPreviousWeek: () => void;
   goToNextWeek: () => void;
@@ -245,7 +245,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
 
     // Check capacity for each week before adding
     const isValid = weeklyAssignments.every(weeklyAssignment => {
-      return get().validateCapacity(weeklyAssignment.personId, weeklyAssignment.percentage);
+      return get().validateCapacity(weeklyAssignment.personId, weeklyAssignment.percentage, weeklyAssignment.startDate, weeklyAssignment.endDate);
     });
 
     if (!isValid) {
@@ -391,8 +391,48 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
     
     return maxDailyCapacity;
   },
-  validateCapacity: (personId: string, additionalPercentage: number = 0) => {
-    const currentCapacity = get().getPersonCapacity(personId);
+  validateCapacity: (personId: string, additionalPercentage: number = 0, startDate?: Date, endDate?: Date) => {
+    const state = get();
+    
+    // If start and end dates are provided, check capacity for the entire assignment duration
+    if (startDate && endDate) {
+      const normalizeToStartOfDay = (date: Date) => {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        return d;
+      };
+
+      const normalizedStart = normalizeToStartOfDay(startDate);
+      const normalizedEnd = normalizeToStartOfDay(endDate);
+      
+      // Check capacity for each day in the assignment duration
+      let currentDate = new Date(normalizedStart);
+      while (currentDate <= normalizedEnd) {
+        const dayCapacity = state.assignments.reduce((sum: number, assignment: Assignment) => {
+          if (assignment.personId === personId) {
+            const aStart = normalizeToStartOfDay(assignment.startDate);
+            const aEnd = normalizeToStartOfDay(assignment.endDate);
+            
+            if (currentDate >= aStart && currentDate <= aEnd) {
+              sum += assignment.percentage;
+            }
+          }
+          return sum;
+        }, 0);
+
+        if (dayCapacity + additionalPercentage > 150) {
+          console.warn(`Capacity limit exceeded on ${currentDate.toISOString().split('T')[0]}: ${dayCapacity} + ${additionalPercentage} = ${dayCapacity + additionalPercentage}%`);
+          return false;
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      return true;
+    }
+
+    // Fallback to checking only the currently selected week if no dates provided
+    const currentCapacity = state.getPersonCapacity(personId);
     return currentCapacity + additionalPercentage <= 150;
   },
   setSelectedWeek: (week: Date) => set({ selectedWeek: snapToWeek(week) }),
