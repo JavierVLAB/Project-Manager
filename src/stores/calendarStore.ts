@@ -406,7 +406,7 @@ export const useCalendarStore = create<CalendarState & CalendarActions>()(
       const normalizedEnd = normalizeToStartOfDay(endDate);
       
       // Check capacity for each day in the assignment duration
-      let currentDate = new Date(normalizedStart);
+      const currentDate = new Date(normalizedStart);
       while (currentDate <= normalizedEnd) {
         const dayCapacity = state.assignments.reduce((sum: number, assignment: Assignment) => {
           if (assignment.personId === personId) {

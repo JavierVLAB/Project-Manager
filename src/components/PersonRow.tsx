@@ -331,7 +331,8 @@ interface PersonRowProps {
                                     
                                     setEditingAssignment(null);
                                     setInputValues(prev => {
-                                      const { [assignment.id]: _, ...rest } = prev;
+                                      const rest = { ...prev };
+                                      delete rest[assignment.id];
                                       return rest;
                                     });
                                   }}
@@ -343,7 +344,8 @@ interface PersonRowProps {
                                   onClick={() => {
                                     setEditingAssignment(null);
                                     setInputValues(prev => {
-                                      const { [assignment.id]: _, ...rest } = prev;
+                                      const rest = { ...prev };
+                                      delete rest[assignment.id];
                                       return rest;
                                     });
                                   }}
